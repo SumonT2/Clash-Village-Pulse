@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\ClashVillagePulse.Application\ClashVillagePulse.Application.csproj" />
@@ -17,6 +17,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>f87b22ca-d2ed-4580-919c-9eaca6a0f8cd</UserSecretsId>
   </PropertyGroup>
 
 </Project>
