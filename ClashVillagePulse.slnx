@@ -1,2 +1,6 @@
 <Solution>
+  <Project Path="ClashVillagePulse.Application/ClashVillagePulse.Application.csproj" />
+  <Project Path="ClashVillagePulse.Domain/ClashVillagePulse.Domain.csproj" />
+  <Project Path="ClashVillagePulse.Infrastructure/ClashVillagePulse.Infrastructure.csproj" />
+  <Project Path="ClashVillagePulse.Web/ClashVillagePulse.Web.csproj" />
 </Solution>
