@@ -1,5 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <ProjectReference Include="..\ClashVillagePulse.Domain\ClashVillagePulse.Domain.csproj" />
+    <ProjectReference Include="..\ClashVillagePulse.Application\ClashVillagePulse.Application.csproj" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
