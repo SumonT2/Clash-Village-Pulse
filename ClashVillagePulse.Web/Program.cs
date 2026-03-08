@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// MVC
+// MVC + Razor Pages (Identity UI uses Razor Pages)
 builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
 
 // Db + Identity
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
