@@ -4,9 +4,10 @@
     <ProjectReference Include="..\ClashVillagePulse.Application\ClashVillagePulse.Application.csproj" />
     <ProjectReference Include="..\ClashVillagePulse.Infrastructure\ClashVillagePulse.Infrastructure.csproj" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.3" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -14,7 +15,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Folder Include="Data\" />
   </ItemGroup>
 
   <PropertyGroup>

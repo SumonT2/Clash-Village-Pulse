@@ -1,0 +1,62 @@
+@model IReadOnlyList<ClashVillagePulse.Application.DTOs.VillageListItemDto>
+
+@{
+    ViewData["Title"] = "My Villages";
+}
+
+<h1>My Villages</h1>
+
+<p>
+    <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-primary">Upload Village</a>
+</p>
+
+@if (TempData["SuccessMessage"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">You have not uploaded any villages yet.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Player Tag</th>
+                <th>Clan</th>
+                <th>Last Uploaded (UTC)</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var village in Model)
+        {
+            <tr>
+                <td>@village.Name</td>
+                <td>@village.PlayerTag</td>
+                <td>
+                    @if (!string.IsNullOrWhiteSpace(village.ClanName))
+                    {
+                        <span>@village.ClanName</span>
+                        @if (!string.IsNullOrWhiteSpace(village.ClanTag))
+                        {
+                            <span class="text-muted">(@village.ClanTag)</span>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted">No clan</span>
+                    }
+                </td>
+                <td>@village.LastUploadedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@village.Id" class="btn btn-sm btn-outline-primary">View</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

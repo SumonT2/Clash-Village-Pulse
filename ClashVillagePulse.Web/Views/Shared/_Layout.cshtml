@@ -26,6 +26,17 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                         </li>
+                        <li class="nav-item">
+    <a class="nav-link text-dark" asp-controller="Village" asp-action="Index">My Villages</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link text-dark" asp-controller="VillageUpload" asp-action="Index">Upload Village</a>
+</li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="StaticData" asp-action="Generate">
+                                Generate Static Data
+                            </a>
+                        </li>
                     </ul>
                     <partial name="_LoginPartial" />
                 </div>

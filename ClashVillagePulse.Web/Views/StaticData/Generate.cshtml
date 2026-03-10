@@ -1,0 +1,58 @@
+﻿@model ClashVillagePulse.Application.DTOs.StaticDataGenerationRequest
+
+<h2>Generate Static Data</h2>
+
+<form method="post">
+    <div>
+        <label>Fingerprint</label>
+        <input name="Fingerprint" style="width:500px" required />
+    </div>
+
+    <br />
+
+    <h4>Select Targets</h4>
+
+    <label>
+        <input type="checkbox" name="Targets" value="buildings" checked />
+        Buildings
+    </label>
+
+    <br />
+
+    <label>
+        <input type="checkbox" name="Targets" value="characters" />
+        Characters
+    </label>
+
+    <br />
+
+    <label>
+        <input type="checkbox" name="Targets" value="heroes" />
+        Heroes
+    </label>
+
+    <br />
+
+    <label>
+        <input type="checkbox" name="Targets" value="spells" />
+        Spells
+    </label>
+
+    <br />
+
+    <label>
+        <input type="checkbox" name="Targets" value="pets" />
+        Pets
+    </label>
+
+    <br />
+
+    <label>
+        <input type="checkbox" name="Targets" value="equipment" />
+        Equipment
+    </label>
+
+    <br />
+
+    <button type="submit">Generate</button>
+</form>

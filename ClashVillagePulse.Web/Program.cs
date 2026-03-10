@@ -1,6 +1,7 @@
-using ClashVillagePulse.Web.Data;
+using ClashVillagePulse.Application;
+using ClashVillagePulse.Infrastructure;
+using ClashVillagePulse.Infrastructure.Database;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,13 +9,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
-// Db + Identity
+// Connection string
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
              ?? throw new InvalidOperationException("Missing DefaultConnection");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connStr));
+// Clean Architecture registrations
+builder.Services.AddApplication();
+builder.Services.AddInfrastructure(connStr);
 
+// Identity
 builder.Services.AddDefaultIdentity<IdentityUser>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;

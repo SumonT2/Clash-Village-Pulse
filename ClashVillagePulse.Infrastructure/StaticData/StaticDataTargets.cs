@@ -1,0 +1,15 @@
+namespace ClashVillagePulse.Infrastructure.StaticData;
+
+public static class StaticDataTargets
+{
+    public static readonly IReadOnlyList<StaticDataTarget> Targets =
+        new List<StaticDataTarget>
+        {
+            new() { Key = "buildings", Path = "logic/buildings.csv" },
+            new() { Key = "characters", Path = "logic/characters.csv" },
+            new() { Key = "heroes", Path = "logic/heroes.csv" },
+            new() { Key = "spells", Path = "logic/spells.csv" },
+            new() { Key = "pets", Path = "logic/pets.csv" },
+            new() { Key = "equipment", Path = "logic/character_items.csv" }
+        };
+}

@@ -1,0 +1,30 @@
+@model ClashVillagePulse.Web.ViewModels.VillageUploadViewModel
+
+@{
+    ViewData["Title"] = "Upload Village";
+}
+
+<h1>Upload Village</h1>
+
+<p>Paste exported Clash village JSON or upload a JSON file.</p>
+
+<form asp-action="Index" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="JsonText" class="form-label"></label>
+        <textarea asp-for="JsonText" class="form-control" rows="18"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="JsonFile" class="form-label"></label>
+        <input asp-for="JsonFile" class="form-control" type="file" accept=".json,application/json" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Upload</button>
+    <a asp-controller="Village" asp-action="Index" class="btn btn-secondary">My Villages</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

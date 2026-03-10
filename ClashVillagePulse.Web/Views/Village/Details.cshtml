@@ -1,0 +1,84 @@
+@model ClashVillagePulse.Application.DTOs.VillageDetailsDto
+
+@{
+    ViewData["Title"] = "Village Details";
+}
+
+<h1>@Model.Name</h1>
+
+@if (TempData["SuccessMessage"] is string msg)
+{
+    <div class="alert alert-success">@msg</div>
+}
+
+<div class="mb-3">
+    <dl class="row">
+        <dt class="col-sm-3">Player Tag</dt>
+        <dd class="col-sm-9">@Model.PlayerTag</dd>
+
+        <dt class="col-sm-3">Clan</dt>
+        <dd class="col-sm-9">
+            @if (!string.IsNullOrWhiteSpace(Model.ClanName))
+            {
+                <span>@Model.ClanName</span>
+                @if (!string.IsNullOrWhiteSpace(Model.ClanTag))
+                {
+                    <span class="text-muted">(@Model.ClanTag)</span>
+                }
+            }
+            else
+            {
+                <span class="text-muted">No clan</span>
+            }
+        </dd>
+
+        <dt class="col-sm-3">Town Hall</dt>
+        <dd class="col-sm-9">@Model.TownHallLevel?.ToString() ?? "Unknown"</dd>
+
+        <dt class="col-sm-3">Builder Hall</dt>
+        <dd class="col-sm-9">@Model.BuilderHallLevel?.ToString() ?? "Unknown"</dd>
+
+        <dt class="col-sm-3">Last Uploaded (UTC)</dt>
+        <dd class="col-sm-9">@Model.LastUploadedAtUtc.ToString("yyyy-MM-dd HH:mm")</dd>
+    </dl>
+</div>
+
+<p>
+    <a asp-action="Index" class="btn btn-secondary">Back to My Villages</a>
+    <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-primary">Upload Again</a>
+</p>
+
+<h2>Imported Items</h2>
+
+@if (!Model.Items.Any())
+{
+    <div class="alert alert-info">No items were imported for this village yet.</div>
+}
+else
+{
+    <table class="table table-sm table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Section</th>
+                <th>Type</th>
+                <th>Item Data Id</th>
+                <th>Level</th>
+                <th>Count</th>
+                <th>Upgrade Timer</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@item.Section</td>
+                <td>@item.ItemType</td>
+                <td>@item.ItemDataId</td>
+                <td>@item.Level</td>
+                <td>@item.Count</td>
+                <td>@(item.UpgradeTimerSeconds?.ToString() ?? "-")</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

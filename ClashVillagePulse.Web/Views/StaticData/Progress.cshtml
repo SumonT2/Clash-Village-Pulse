@@ -1,0 +1,66 @@
+﻿@{
+    var runId = ViewBag.RunId;
+}
+
+<h2>Static Data Generation Progress</h2>
+
+<div id="status">Loading...</div>
+
+<table border="1" cellpadding="6">
+    <thead>
+        <tr>
+            <th>Target</th>
+            <th>Step</th>
+            <th>Status</th>
+            <th>Message</th>
+        </tr>
+    </thead>
+    <tbody id="steps"></tbody>
+</table>
+
+<script>
+
+    const runId = "@runId";
+
+    async function refresh()
+    {
+        const response = await fetch(`/StaticData/GetRunStatus?id=${runId}`);
+        const data = await response.json();
+
+        document.getElementById("status").innerText = "Run Status: " + data.status;
+
+        const tbody = document.getElementById("steps");
+        tbody.innerHTML = "";
+
+        data.steps.forEach(step => {
+
+            let statusIcon = "";
+
+            if(step.status === "Succeeded")
+                statusIcon = "✔";
+
+            if(step.status === "Failed")
+                statusIcon = "❌";
+
+            if(step.status === "Running")
+                statusIcon = "⏳";
+
+            const row = `
+                <tr>
+                    <td>${step.targetKey}</td>
+                    <td>${step.stepType}</td>
+                    <td>${statusIcon} ${step.status}</td>
+                    <td>${step.message ?? ""}</td>
+                </tr>
+            `;
+
+            tbody.innerHTML += row;
+        });
+
+        if(data.status === "Running")
+            setTimeout(refresh, 2000);
+    }
+
+    refresh();
+
+</script>
