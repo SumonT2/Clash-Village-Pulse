@@ -10,7 +10,12 @@
 {
     <div class="alert alert-success">@msg</div>
 }
-
+<form asp-action="SyncProfile" method="post">
+    <input type="hidden" name="id" value="@Model.Id" />
+    <button class="btn btn-primary">
+        Sync Clash Profile
+    </button>
+</form>
 <div class="mb-3">
     <dl class="row">
         <dt class="col-sm-3">Player Tag</dt>

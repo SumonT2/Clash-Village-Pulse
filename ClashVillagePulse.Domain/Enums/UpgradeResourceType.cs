@@ -15,5 +15,7 @@ public enum UpgradeResourceType
 
     ShinyOre = 7,
     GlowyOre = 8,
-    StarryOre = 9
+    StarryOre = 9,
+
+    Gem = 10
 }

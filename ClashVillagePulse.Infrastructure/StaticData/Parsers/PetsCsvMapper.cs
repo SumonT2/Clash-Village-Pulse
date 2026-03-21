@@ -4,14 +4,16 @@ using System.Globalization;
 
 namespace ClashVillagePulse.Infrastructure.StaticData.Parsers;
 
-public class BuildingsCsvMapper
+public class PetsCsvMapper
 {
-    public List<BuildingCsvRow> Parse(Stream stream)
+    private const int PetGlobalIdPrefix = 73;
+
+    public List<PetCsvRow> Parse(Stream stream)
     {
         using var reader = new StreamReader(stream);
         using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
 
-        var rows = new List<BuildingCsvRow>();
+        var rows = new List<PetCsvRow>();
 
         // Row 0: header
         if (!csv.Read())
@@ -26,9 +28,10 @@ public class BuildingsCsvMapper
         string? currentName = null;
         int? currentGlobalId = null;
         string? currentTid = null;
-        int? currentTownHallLevel = null;
-        int? currentCapitalHallLevel = null;
+        int? currentRequiredTownHallLevel = null;
         string? currentVillageType = null;
+
+        var petIndex = -1;
 
         while (csv.Read())
         {
@@ -36,68 +39,58 @@ public class BuildingsCsvMapper
             if (!string.IsNullOrWhiteSpace(name))
             {
                 currentName = name;
-                currentGlobalId = null;
+                petIndex++;
+                currentGlobalId = BuildSyntheticGlobalId(petIndex);
+
+                // reset per-item state so values do not leak
                 currentTid = null;
-                currentTownHallLevel = null;
-                currentCapitalHallLevel = null;
+                currentRequiredTownHallLevel = null;
                 currentVillageType = null;
-
             }
-                
 
-            var globalId = GetInt(csv, "GlobalID");
-            if (globalId.HasValue)
-                currentGlobalId = globalId;
+            if (string.IsNullOrWhiteSpace(currentName))
+                continue;
 
             var tid = GetString(csv, "TID");
             if (!string.IsNullOrWhiteSpace(tid))
                 currentTid = tid;
 
-            var townHall = GetInt(csv, "TownHallLevel");
-            if (townHall.HasValue)
-                currentTownHallLevel = townHall;
-
-            var capitalHall = GetInt(csv, "CapitalHallLevel");
-            if (capitalHall.HasValue)
-                currentCapitalHallLevel = capitalHall;
+            var requiredTownHallLevel = GetInt(csv, "RequiredTownHallLevel");
+            if (requiredTownHallLevel.HasValue)
+                currentRequiredTownHallLevel = requiredTownHallLevel;
 
             var villageType = GetString(csv, "VillageType");
             if (!string.IsNullOrWhiteSpace(villageType))
                 currentVillageType = villageType;
 
-            var buildingLevel = GetInt(csv, "BuildingLevel") ?? 0;
+            var level =
+                GetInt(csv, "Level")
+                ?? GetInt(csv, "TroopLevel")
+                ?? GetInt(csv, "VisualLevel")
+                ?? 0;
 
-            if (string.IsNullOrWhiteSpace(currentName))
+            if (level <= 0)
                 continue;
 
-            if (buildingLevel <= 0)
-                continue;
-
-            rows.Add(new BuildingCsvRow
+            rows.Add(new PetCsvRow
             {
                 Name = currentName!,
                 GlobalId = currentGlobalId,
-                BuildingLevel = buildingLevel,
+                Level = level,
                 TID = currentTid,
-                BuildResource = GetString(csv, "BuildResource"),
-                BuildCost = GetLong(csv, "BuildCost"),
-                AlternateResource = GetString(csv, "AltResource")
-                                    ?? GetString(csv, "AlternateResource")
-                                    ?? GetString(csv, "AltBuildResource"),
-                AlternateCost = GetLong(csv, "AltCost")
-                                ?? GetLong(csv, "AlternateCost"),
-                TownHallLevel = currentTownHallLevel,
-                CapitalHallLevel = currentCapitalHallLevel,
-                BuildTimeD = GetInt(csv, "BuildTimeD"),
-                BuildTimeH = GetInt(csv, "BuildTimeH"),
-                BuildTimeM = GetInt(csv, "BuildTimeM"),
-                BuildTimeS = GetInt(csv, "BuildTimeS"),
+                RequiredTownHallLevel = currentRequiredTownHallLevel,
+                UpgradeResource = GetString(csv, "UpgradeResource"),
+                UpgradeCost = GetLong(csv, "UpgradeCost"),
+                UpgradeTimeH = GetInt(csv, "UpgradeTimeH"),
                 VillageType = currentVillageType
             });
         }
 
         return rows;
     }
+
+    private static int BuildSyntheticGlobalId(int itemIndex)
+        => (PetGlobalIdPrefix * 1_000_000) + itemIndex;
 
     private static string? GetString(CsvReader csv, string column)
     {

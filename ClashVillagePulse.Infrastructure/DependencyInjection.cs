@@ -35,6 +35,14 @@ public static class DependencyInjection
         services.AddScoped<StaticDataDecompressor>();
         services.AddScoped<StaticDataRunTracker>();
         services.AddScoped<StaticDataProcessorRegistry>();
+        services.AddScoped<SpellsCsvMapper>();
+        services.AddScoped<CharactersCsvMapper>();
+        services.AddScoped<LocalizationTextsCsvMapper>();
+        services.AddScoped<HeroesCsvMapper>();
+        services.AddScoped<PetsCsvMapper>();
+        services.AddScoped<EquipmentCsvMapper>();
+        services.AddHttpClient<IClashApiService, ClashApiService>();
+        services.AddScoped<IClashProfileSyncService, ClashProfileSyncService>();
 
         return services;
     }

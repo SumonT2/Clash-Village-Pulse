@@ -29,4 +29,5 @@ public class BuildingCsvRow
     public int? BuildTimeM { get; set; }
 
     public int? BuildTimeS { get; set; }
+    public string? VillageType { get; set; }
 }

@@ -1,7 +1,8 @@
-using System.Security.Claims;
 using ClashVillagePulse.Application.Interfaces;
+using ClashVillagePulse.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ClashVillagePulse.Web.Controllers;
 
@@ -9,10 +10,14 @@ namespace ClashVillagePulse.Web.Controllers;
 public class VillageController : Controller
 {
     private readonly IVillageQueryService _villageQueryService;
+    private readonly IClashProfileSyncService _clashProfileSyncService;
 
-    public VillageController(IVillageQueryService villageQueryService)
+    public VillageController(
+     IVillageQueryService villageQueryService,
+     IClashProfileSyncService clashProfileSyncService)
     {
         _villageQueryService = villageQueryService;
+        _clashProfileSyncService = clashProfileSyncService;
     }
 
     [HttpGet]
@@ -38,5 +43,24 @@ public class VillageController : Controller
             return NotFound();
 
         return View(village);
+    }
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncProfile(Guid id, CancellationToken cancellationToken)
+    {
+        string userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        try
+        {
+
+            await _clashProfileSyncService.SyncVillageProfileAsync(id, userId, cancellationToken);
+            TempData["SuccessMessage"] = "Player and clan info synced successfully.";
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Details), new { id });
     }
 }

@@ -10,6 +10,8 @@ public static class StaticDataTargets
             new() { Key = "heroes", Path = "logic/heroes.csv" },
             new() { Key = "spells", Path = "logic/spells.csv" },
             new() { Key = "pets", Path = "logic/pets.csv" },
-            new() { Key = "equipment", Path = "logic/character_items.csv" }
+            new() { Key = "equipment", Path = "logic/character_items.csv" },
+            new() { Key = "texts", Path = "localization/texts.csv" },
+            
         };
 }

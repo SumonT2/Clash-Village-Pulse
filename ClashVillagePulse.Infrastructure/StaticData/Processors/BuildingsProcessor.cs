@@ -72,7 +72,7 @@ public class BuildingsProcessor : StaticDataTargetProcessorBase
             .GroupBy(x => new
             {
                 GlobalId = x.GlobalId!.Value,
-                Section = ResolveVillageSection(x.CapitalHallLevel)
+                Section = VillageTypeResolver.ResolveSection(x.VillageType)
             })
             .ToList();
 
@@ -139,12 +139,6 @@ public class BuildingsProcessor : StaticDataTargetProcessorBase
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static VillageSection ResolveVillageSection(int? capitalHallLevel)
-    {
-        return capitalHallLevel.HasValue && capitalHallLevel.Value > 0
-            ? VillageSection.BuilderBase
-            : VillageSection.HomeVillage;
-    }
 
     private static int? ToSeconds(int? d, int? h, int? m, int? s)
     {

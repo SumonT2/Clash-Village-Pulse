@@ -30,43 +30,36 @@ public sealed class VillageUploadService : IVillageUploadService
             ? ts.GetInt64()
             : null;
 
-        string villageName = root.TryGetProperty("name", out var nameEl) && nameEl.ValueKind == JsonValueKind.String
-            ? nameEl.GetString()!.Trim()
-            : playerTag;
-
-        string? clanTag = TryGetString(root, "clanTag");
-        string? clanName = TryGetString(root, "clanName");
+        string? uploadedVillageName = TryGetString(root, "name");
+        string? uploadedClanTag = TryGetString(root, "clanTag");
+        string? uploadedClanName = TryGetString(root, "clanName");
 
         Clan? clan = null;
-        bool clanLinked = false;
 
-        if (!string.IsNullOrWhiteSpace(clanTag))
+        if (!string.IsNullOrWhiteSpace(uploadedClanTag))
         {
             clan = await _db.Clans
-                .FirstOrDefaultAsync(x => x.ClanTag == clanTag, cancellationToken);
+                .FirstOrDefaultAsync(x => x.ClanTag == uploadedClanTag, cancellationToken);
 
             if (clan is null)
             {
                 clan = new Clan
                 {
                     Id = Guid.NewGuid(),
-                    ClanTag = clanTag!,
-                    Name = string.IsNullOrWhiteSpace(clanName) ? clanTag! : clanName!
+                    ClanTag = uploadedClanTag!,
+                    Name = string.IsNullOrWhiteSpace(uploadedClanName) ? uploadedClanTag! : uploadedClanName!
                 };
 
                 _db.Clans.Add(clan);
             }
-            else if (!string.IsNullOrWhiteSpace(clanName) && clan.Name != clanName)
+            else if (!string.IsNullOrWhiteSpace(uploadedClanName) && clan.Name != uploadedClanName)
             {
-                clan.Name = clanName!;
+                clan.Name = uploadedClanName!;
                 clan.UpdatedAtUtc = DateTime.UtcNow;
             }
-
-            clanLinked = true;
         }
 
         var village = await _db.Villages
-            .Include(x => x.ItemLevels)
             .FirstOrDefaultAsync(x => x.PlayerTag == playerTag, cancellationToken);
 
         bool villageCreated = false;
@@ -78,10 +71,10 @@ public sealed class VillageUploadService : IVillageUploadService
                 Id = Guid.NewGuid(),
                 OwnerUserId = ownerUserId,
                 PlayerTag = playerTag,
-                Name = villageName,
+                Name = !string.IsNullOrWhiteSpace(uploadedVillageName) ? uploadedVillageName! : playerTag,
                 ClanId = clan?.Id,
-                ClanTag = clanTag,
-                ClanName = clanName,
+                ClanTag = uploadedClanTag,
+                ClanName = uploadedClanName,
                 LastGameTimestamp = gameTimestamp,
                 LastUploadedAtUtc = DateTime.UtcNow
             };
@@ -92,13 +85,15 @@ public sealed class VillageUploadService : IVillageUploadService
         else
         {
             village.OwnerUserId = ownerUserId;
-            village.Name = villageName;
-            village.ClanId = clan?.Id;
-            village.ClanTag = clanTag;
-            village.ClanName = clanName;
             village.LastGameTimestamp = gameTimestamp;
             village.LastUploadedAtUtc = DateTime.UtcNow;
             village.IsArchived = false;
+
+            // Preserve existing metadata from previous API sync:
+            // village.Name
+            // village.ClanId
+            // village.ClanTag
+            // village.ClanName
         }
 
         if (clan is not null)
@@ -116,9 +111,17 @@ public sealed class VillageUploadService : IVillageUploadService
                     UserId = ownerUserId
                 });
             }
+
+            // Only apply upload clan metadata for newly created villages.
+            // Existing villages keep previous metadata until explicit API sync.
+            if (villageCreated)
+            {
+                village.ClanId = clan.Id;
+                village.ClanTag = clan.ClanTag;
+                village.ClanName = clan.Name;
+            }
         }
 
-        // Remove old latest-state rows
         var oldItems = await _db.VillageItemLevels
             .Where(x => x.VillageId == village.Id)
             .ToListAsync(cancellationToken);
@@ -140,9 +143,9 @@ public sealed class VillageUploadService : IVillageUploadService
             VillageName = village.Name,
             TotalItemsImported = items.Count,
             VillageCreated = villageCreated,
-            ClanLinked = clanLinked,
-            ClanTag = clanTag,
-            ClanName = clanName
+            ClanLinked = village.ClanId.HasValue,
+            ClanTag = village.ClanTag,
+            ClanName = village.ClanName
         };
     }
 
@@ -150,7 +153,6 @@ public sealed class VillageUploadService : IVillageUploadService
     {
         var items = new List<VillageItemLevel>();
 
-        // Home village
         AddObjectArray(root, "helpers", VillageSection.HomeVillage, ItemType.Helper, villageId, items);
         AddObjectArray(root, "guardians", VillageSection.HomeVillage, ItemType.Guardian, villageId, items);
         AddObjectArray(root, "buildings", VillageSection.HomeVillage, ItemType.Building, villageId, items);
@@ -168,7 +170,6 @@ public sealed class VillageUploadService : IVillageUploadService
         AddIntArray(root, "skins", VillageSection.HomeVillage, ItemType.Skin, villageId, items);
         AddIntArray(root, "sceneries", VillageSection.HomeVillage, ItemType.Scenery, villageId, items);
 
-        // Builder base
         AddObjectArray(root, "buildings2", VillageSection.BuilderBase, ItemType.Building, villageId, items);
         AddObjectArray(root, "traps2", VillageSection.BuilderBase, ItemType.Trap, villageId, items);
         AddObjectArray(root, "decos2", VillageSection.BuilderBase, ItemType.Decoration, villageId, items);
@@ -198,7 +199,6 @@ public sealed class VillageUploadService : IVillageUploadService
             if (entry.ValueKind != JsonValueKind.Object)
                 continue;
 
-            // Normal item
             if (entry.TryGetProperty("data", out var dataEl) && dataEl.ValueKind == JsonValueKind.Number)
             {
                 int itemDataId = dataEl.GetInt32();
@@ -230,7 +230,6 @@ public sealed class VillageUploadService : IVillageUploadService
                 });
             }
 
-            // Nested modules in buildings/types/modules
             if (entry.TryGetProperty("types", out var typesEl) && typesEl.ValueKind == JsonValueKind.Array)
             {
                 foreach (var typeEntry in typesEl.EnumerateArray())

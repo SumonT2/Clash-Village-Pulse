@@ -28,6 +28,7 @@ public class AppDbContext : IdentityDbContext
     public DbSet<StaticItemLevel> StaticItemLevels => Set<StaticItemLevel>();
     public DbSet<StaticItemLevelUpgradeCost> StaticItemLevelUpgradeCosts => Set<StaticItemLevelUpgradeCost>();
     public DbSet<StaticItemRequirement> StaticItemRequirements => Set<StaticItemRequirement>();
+    public DbSet<LocalizationText> LocalizationTexts => Set<LocalizationText>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -40,6 +41,7 @@ public class AppDbContext : IdentityDbContext
         ConfigureClanPriority(builder);
         ConfigureVillagePriority(builder);
         ConfigureSuggestion(builder);
+        ConfigureLocalizationText(builder);
     }
 
     private static void ConfigureClan(ModelBuilder builder)
@@ -350,6 +352,29 @@ public class AppDbContext : IdentityDbContext
         }).IsUnique(false);
     }
 
+    private static void ConfigureLocalizationText(ModelBuilder builder)
+    {
+        var e = builder.Entity<LocalizationText>();
+
+        e.ToTable("localization_texts");
+
+        e.HasKey(x => x.Id);
+
+        e.Property(x => x.Tid)
+            .HasMaxLength(200)
+            .IsRequired();
+
+        e.Property(x => x.LanguageCode)
+            .HasMaxLength(10)
+            .IsRequired();
+
+        e.Property(x => x.Text)
+            .HasMaxLength(4000)
+            .IsRequired();
+
+        e.HasIndex(x => new { x.Tid, x.LanguageCode })
+            .IsUnique();
+    }
 
 
 }
