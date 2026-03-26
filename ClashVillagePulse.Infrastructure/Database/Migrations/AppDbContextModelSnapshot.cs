@@ -188,12 +188,17 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("SuggestedPriorityRank")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("VillageId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("VillageId");
+                    b.HasIndex("VillageId", "Status", "CreatedAtUtc");
+
+                    b.HasIndex("VillageId", "Section", "ItemType", "ItemDataId");
 
                     b.ToTable("priority_suggestions", (string)null);
                 });
@@ -209,17 +214,20 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
 
                     b.Property<string>("Fingerprint")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Message")
-                        .HasColumnType("text");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime>("RequestedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RequestedByUserId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<DateTime?>("StartedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -229,7 +237,11 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("StaticDataRuns");
+                    b.HasIndex("RequestedAtUtc");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("static_data_runs", (string)null);
                 });
 
             modelBuilder.Entity("ClashVillagePulse.Domain.Entities.StaticDataRunStep", b =>
@@ -242,7 +254,8 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Message")
-                        .HasColumnType("text");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime?>("StartedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -258,13 +271,46 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
 
                     b.Property<string>("TargetKey")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StaticDataRunId");
+                    b.HasIndex("Status");
 
-                    b.ToTable("StaticDataRunSteps");
+                    b.HasIndex("StaticDataRunId", "TargetKey", "StepType")
+                        .IsUnique();
+
+                    b.ToTable("static_data_run_steps", (string)null);
+                });
+
+            modelBuilder.Entity("ClashVillagePulse.Domain.Entities.StaticHallItemCap", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("HallLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ItemDataId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ItemType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Section")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Section", "HallLevel", "ItemType", "ItemDataId")
+                        .IsUnique();
+
+                    b.ToTable("static_hall_item_caps", (string)null);
                 });
 
             modelBuilder.Entity("ClashVillagePulse.Domain.Entities.StaticItem", b =>
@@ -284,14 +330,18 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("Section")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.ToTable("StaticItems");
+                    b.HasIndex("ItemDataId", "ItemType", "Section")
+                        .IsUnique();
+
+                    b.ToTable("static_items", (string)null);
                 });
 
             modelBuilder.Entity("ClashVillagePulse.Domain.Entities.StaticItemLevel", b =>
@@ -311,9 +361,10 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StaticItemId");
+                    b.HasIndex("StaticItemId", "Level")
+                        .IsUnique();
 
-                    b.ToTable("StaticItemLevels");
+                    b.ToTable("static_item_levels", (string)null);
                 });
 
             modelBuilder.Entity("ClashVillagePulse.Domain.Entities.StaticItemLevelUpgradeCost", b =>
@@ -333,9 +384,10 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StaticItemLevelId");
+                    b.HasIndex("StaticItemLevelId", "ResourceType")
+                        .IsUnique();
 
-                    b.ToTable("StaticItemLevelUpgradeCosts");
+                    b.ToTable("static_item_level_upgrade_costs", (string)null);
                 });
 
             modelBuilder.Entity("ClashVillagePulse.Domain.Entities.StaticItemRequirement", b =>
@@ -358,9 +410,9 @@ namespace ClashVillagePulse.Infrastructure.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StaticItemLevelId");
+                    b.HasIndex("StaticItemLevelId", "RequirementType", "RequiredItemDataId", "RequiredLevel");
 
-                    b.ToTable("StaticItemRequirements");
+                    b.ToTable("static_item_requirements", (string)null);
                 });
 
             modelBuilder.Entity("ClashVillagePulse.Domain.Entities.Village", b =>

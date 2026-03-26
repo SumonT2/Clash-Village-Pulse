@@ -84,7 +84,9 @@ public sealed class VillageUploadService : IVillageUploadService
         }
         else
         {
-            village.OwnerUserId = ownerUserId;
+            if (!string.Equals(village.OwnerUserId, ownerUserId, StringComparison.Ordinal))
+                throw new InvalidOperationException("This village already belongs to another user.");
+
             village.LastGameTimestamp = gameTimestamp;
             village.LastUploadedAtUtc = DateTime.UtcNow;
             village.IsArchived = false;

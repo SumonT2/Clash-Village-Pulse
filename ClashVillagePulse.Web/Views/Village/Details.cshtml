@@ -1,89 +1,1552 @@
-@model ClashVillagePulse.Application.DTOs.VillageDetailsDto
+@using ClashVillagePulse.Application.DTOs
+@using ClashVillagePulse.Domain.Enums
+@model VillageDetailsDto
 
 @{
-    ViewData["Title"] = "Village Details";
+    ViewData["Title"] = Model.Name;
+    var nowUtc = DateTime.UtcNow;
+
+    Func<int, int, int> toPercent = (value, max) =>
+    {
+        if (max <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Clamp((int)Math.Round((double)value / max * 100d), 0, 100);
+    };
+
+    Func<TimeSpan, string> formatRemaining = remaining =>
+    {
+        if (remaining <= TimeSpan.Zero)
+        {
+            return "Completed";
+        }
+
+        var totalSeconds = (int)Math.Floor(remaining.TotalSeconds);
+        var days = totalSeconds / 86400;
+        totalSeconds -= days * 86400;
+        var hours = totalSeconds / 3600;
+        totalSeconds -= hours * 3600;
+        var minutes = totalSeconds / 60;
+        var seconds = totalSeconds - minutes * 60;
+
+        if (days > 0)
+        {
+            return $"{days}d {hours:D2}:{minutes:D2}:{seconds:D2}";
+        }
+
+        return $"{hours:D2}:{minutes:D2}:{seconds:D2}";
+    };
+
+    Func<VillageItemStateDto, bool> isAtCurrentHallCap = item =>
+        (!item.MaxLevelAtCurrentHall.HasValue || item.CurrentMinLevel >= item.MaxLevelAtCurrentHall.Value) &&
+        (!item.MaxCountAtCurrentHall.HasValue || item.CurrentTotalCount >= item.MaxCountAtCurrentHall.Value);
+
+    Func<VillageSection, string> sectionLabel = section => section switch
+    {
+        VillageSection.HomeVillage => "Home Village",
+        VillageSection.BuilderBase => "Builder Base",
+        _ => section.ToString()
+    };
+
+    Func<ItemType, string> itemTypeLabel = itemType => itemType switch
+    {
+        ItemType.Building => "Buildings",
+        ItemType.Trap => "Traps",
+        ItemType.Troop => "Troops",
+        ItemType.Hero => "Heroes",
+        ItemType.Spell => "Spells",
+        ItemType.Pet => "Pets",
+        ItemType.Equipment => "Equipment",
+        ItemType.SiegeMachine => "Siege Machines",
+        ItemType.Helper => "Helpers",
+        ItemType.Guardian => "Guardians",
+        _ => itemType.ToString()
+    };
+
+    Func<ItemType, string> itemTypeIcon = itemType => itemType switch
+    {
+        ItemType.Building => "🏰",
+        ItemType.Trap => "💣",
+        ItemType.Troop => "⚔️",
+        ItemType.Hero => "🛡️",
+        ItemType.Spell => "✨",
+        ItemType.Pet => "🐾",
+        ItemType.Equipment => "🧰",
+        ItemType.SiegeMachine => "🚪",
+        ItemType.Helper => "🧑‍🔧",
+        ItemType.Guardian => "🗿",
+        _ => "📦"
+    };
+
+    Func<ItemType, int> itemTypeOrder = itemType => itemType switch
+    {
+        ItemType.Building => 1,
+        ItemType.Trap => 2,
+        ItemType.Hero => 3,
+        ItemType.Guardian => 4,
+        ItemType.Troop => 5,
+        ItemType.Spell => 6,
+        ItemType.Pet => 7,
+        ItemType.Equipment => 8,
+        ItemType.SiegeMachine => 9,
+        ItemType.Helper => 10,
+        _ => 99
+    };
+
+    Func<string, int> timerGroupOrder = group => group switch
+    {
+        "Helpers" => 1,
+        "Builder Upgrades" => 2,
+        "Laboratory Upgrades" => 3,
+        "Pet House Upgrades" => 4,
+        _ => 99
+    };
+
+    Func<string, int> helperStatusOrder = status => status switch
+    {
+        "Assigned" => 1,
+        "Leveling" => 2,
+        "Cooldown" => 3,
+        "Idle" => 4,
+        _ => 99
+    };
+
+    var helpers = Model.Helpers
+        .OrderBy(x => helperStatusOrder(x.StatusLabel))
+        .ThenBy(x => x.ItemName)
+        .ToList();
+
+    var timerGroups = Model.ActiveTimers
+        .GroupBy(x => x.ProgressGroup)
+        .OrderBy(x => timerGroupOrder(x.Key))
+        .ToList();
+
+    var prioritizedItems = Model.ItemStates
+        .Where(x => x.EffectivePriorityRank.HasValue)
+        .OrderBy(x => x.EffectivePriorityRank)
+        .ThenBy(x => x.ItemName)
+        .ToList();
+
+    var groupedSections = Model.ItemStates
+        .Where(x => !x.EffectivePriorityRank.HasValue)
+        .GroupBy(x => x.Section)
+        .OrderBy(x => x.Key == VillageSection.HomeVillage ? 0 : 1)
+        .ToList();
+
+    var totalItems = Model.ItemStates.Count;
+    var cappedItems = Model.ItemStates.Count(x => isAtCurrentHallCap(x));
+    var prioritizedCount = prioritizedItems.Count;
+    var pendingCount = Model.PendingSuggestions.Count;
+    var helperCount = helpers.Count;
+    var activeTimerCount = Model.ActiveTimers.Count;
+
+    var clanDisplay = string.IsNullOrWhiteSpace(Model.ClanName)
+        ? "No clan linked"
+        : string.IsNullOrWhiteSpace(Model.ClanTag)
+            ? Model.ClanName!
+            : $"{Model.ClanName} ({Model.ClanTag})";
+
+    var villageInitial = string.IsNullOrWhiteSpace(Model.Name)
+        ? "V"
+        : Model.Name.Substring(0, 1).ToUpperInvariant();
 }
 
-<h1>@Model.Name</h1>
+<style>
+    .level-progress-stack {
+        display: flex;
+        width: 100%;
+        height: 10px;
+        overflow: hidden;
+        border-radius: 3px;
+        background-color: #f5f5f5;
+        box-shadow: none;
+    }
 
-@if (TempData["SuccessMessage"] is string msg)
+    .level-progress-segment {
+        height: 100%;
+        transition: width .2s ease;
+        background-size: 40px 40px;
+        background-image: linear-gradient( 45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent );
+    }
+
+    .level-progress-current {
+        background-color: #64DD17;
+    }
+
+    .level-progress-cap {
+        background-color: rgba(100, 221, 23, .35);
+    }
+
+    .level-progress-max {
+        background-color: #f5f5f5;
+        background-image: none;
+    }
+
+    .progress-group {
+        display: flex;
+        flex-direction: column;
+        gap: .45rem;
+    }
+
+    .level-bucket-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: .55rem;
+        margin-top: .5rem;
+        padding: .65rem .7rem;
+        border: 1px solid rgba(98, 105, 118, .14);
+        border-radius: 12px;
+        background: rgba(248, 250, 252, .88);
+    }
+
+    .level-bucket-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: .75rem;
+        padding-bottom: .1rem;
+    }
+
+    .level-bucket-row {
+        padding: 0;
+    }
+
+        .level-bucket-row + .level-bucket-row {
+            padding-top: .5rem;
+            border-top: 1px solid rgba(98, 105, 118, .10);
+        }
+
+    .count-status-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .375rem;
+    }
+
+    .item-card,
+    .progress-timer-card {
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+        border: 1px solid rgba(98, 105, 118, .16);
+        background: rgba(255, 255, 255, .96);
+        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+
+        .item-card::before,
+        .progress-timer-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 4px;
+            background: #E6E6FA;
+            pointer-events: none;
+        }
+
+        .item-card .card-body,
+        .progress-timer-card .card-body {
+            position: relative;
+            z-index: 1;
+            padding: .75rem;
+        }
+
+        .item-card:hover,
+        .progress-timer-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .07);
+        }
+
+        .item-card .fw-bold.fs-3,
+        .progress-timer-card .fw-bold.fs-3,
+        .progress-timer-card .fw-bold.fs-4 {
+            font-size: 1rem !important;
+            line-height: 1.25;
+        }
+
+        .item-card .badge,
+        .progress-timer-card .badge,
+        .compact-card .badge {
+            font-size: .7rem;
+        }
+
+        .item-card .text-secondary.small,
+        .progress-timer-card .text-secondary.small,
+        .compact-card .text-secondary.small {
+            font-size: .72rem;
+        }
+
+    .section-heading {
+        margin-bottom: 0;
+    }
+
+    .countdown-value {
+        font-variant-numeric: tabular-nums;
+    }
+
+    .compact-card > .card-header {
+        padding: .65rem .9rem;
+        background: rgba(232, 240, 255, .82);
+        border-bottom: 1px solid rgba(32, 107, 196, .10);
+        color: var(--tblr-body-color);
+    }
+
+        .compact-card > .card-header .card-title,
+        .compact-card > .card-header .text-secondary {
+            color: var(--tblr-body-color) !important;
+        }
+
+    .section-card > .card-header {
+        padding: .7rem .9rem;
+        background: transparent;
+        border-bottom: 1px solid rgba(98, 105, 118, .14);
+        color: var(--tblr-body-color);
+    }
+
+        .section-card > .card-header .card-title,
+        .section-card > .card-header .text-secondary {
+            color: inherit !important;
+        }
+
+    .compact-card > .card-body,
+    .section-card > .card-body {
+        padding: .8rem;
+    }
+
+    .detail-search-toolbar {
+        position: sticky;
+        top: 1rem;
+        z-index: 25;
+    }
+
+    .detail-search-row.is-filtered-out,
+    .detail-card-col.is-filtered-out {
+        display: none;
+    }
+
+    .suggestion-note {
+        font-size: .72rem;
+        color: var(--tblr-secondary);
+    }
+
+    .summary-stat-card .card-body {
+        padding: .8rem .9rem;
+    }
+
+    .summary-stat-card .display-6 {
+        font-size: 1.65rem;
+        line-height: 1.1;
+    }
+
+    .summary-stat-card .text-secondary.text-uppercase {
+        font-size: .72rem;
+        letter-spacing: .04em;
+    }
+
+    .village-hero-card {
+        border: 0;
+    }
+
+    .village-hero {
+        padding: 1rem 1.1rem;
+        color: #fff;
+        background: linear-gradient(135deg, rgba(32, 107, 196, .96) 0%, rgba(112, 72, 232, .94) 100%);
+    }
+
+        .village-hero .badge.bg-white {
+            background: rgba(255, 255, 255, .92) !important;
+        }
+
+    .village-hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+        .village-hero-actions .btn {
+            --tblr-btn-padding-y: .35rem;
+            --tblr-btn-padding-x: .65rem;
+            --tblr-btn-font-size: .78rem;
+        }
+
+        .village-hero-actions .btn-icon {
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+        }
+
+    .village-hero-avatar {
+        width: 3.25rem;
+        height: 3.25rem;
+        font-size: 1.65rem;
+        border-radius: .75rem;
+    }
+
+    .village-hero-name {
+        font-size: 1.85rem;
+        line-height: 1.08;
+    }
+
+    .village-hero-subtle {
+        color: rgba(255, 255, 255, .78);
+    }
+
+    .village-hero-capabilities {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+        margin-top: .85rem;
+    }
+
+        .village-hero-capabilities .badge {
+            font-size: .72rem;
+            box-shadow: 0 .125rem .25rem rgba(15, 23, 42, .12);
+        }
+
+    @@media (max-width: 991.98px) {
+        .village-hero-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .village-hero-name {
+            font-size: 1.45rem;
+        }
+    }
+</style>
+
+@if (TempData["SuccessMessage"] is string success)
 {
-    <div class="alert alert-success">@msg</div>
+    <div class="alert alert-success alert-dismissible mb-4" role="alert">
+        <div>@success</div>
+        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+    </div>
 }
-<form asp-action="SyncProfile" method="post">
-    <input type="hidden" name="id" value="@Model.Id" />
-    <button class="btn btn-primary">
-        Sync Clash Profile
-    </button>
-</form>
-<div class="mb-3">
-    <dl class="row">
-        <dt class="col-sm-3">Player Tag</dt>
-        <dd class="col-sm-9">@Model.PlayerTag</dd>
 
-        <dt class="col-sm-3">Clan</dt>
-        <dd class="col-sm-9">
-            @if (!string.IsNullOrWhiteSpace(Model.ClanName))
-            {
-                <span>@Model.ClanName</span>
-                @if (!string.IsNullOrWhiteSpace(Model.ClanTag))
+@if (TempData["ErrorMessage"] is string error)
+{
+    <div class="alert alert-danger alert-dismissible mb-4" role="alert">
+        <div>@error</div>
+        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+    </div>
+}
+
+<div class="card mb-4 overflow-hidden village-hero-card">
+    <div class="card-body p-0">
+        <div class="village-hero">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    @if (Model.IsOwner)
+                    {
+                        <span class="badge bg-white text-dark">Owner</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-white text-dark">Clan View</span>
+                    }
+
+                    @if (Model.TownHallLevel.HasValue)
+                    {
+                        <span class="badge bg-dark text-white">TH @Model.TownHallLevel</span>
+                    }
+
+                    @if (Model.BuilderHallLevel.HasValue)
+                    {
+                        <span class="badge bg-dark text-white">BH @Model.BuilderHallLevel</span>
+                    }
+
+                    <span class="badge bg-white text-dark">
+                        Uploaded @Model.LastUploadedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                    </span>
+                </div>
+
+                <div class="village-hero-actions">
+                    <a asp-action="Index"
+                       class="btn btn-icon btn-outline-light"
+                       title="Back to My Villages"
+                       aria-label="Back to My Villages">
+                        <span aria-hidden="true">←</span>
+                    </a>
+
+                    <a asp-action="Clan" class="btn btn-outline-light">
+                        Clan Villages
+                    </a>
+
+                    @if (Model.IsOwner)
+                    {
+                        <a asp-controller="VillagePriority"
+                           asp-action="Edit"
+                           asp-route-villageId="@Model.Id"
+                           class="btn btn-light text-primary fw-semibold">
+                            Manage Priority
+                        </a>
+
+                        <form asp-action="SyncProfile" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <button class="btn btn-outline-light">
+                                <span aria-hidden="true">↻</span>
+                                API Sync
+                            </button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <span class="avatar bg-white text-dark fw-bold village-hero-avatar">@villageInitial</span>
+
+                <div class="flex-fill">
+                    <div class="village-hero-name fw-bold">@Model.Name</div>
+                    <div class="village-hero-subtle">@Model.PlayerTag</div>
+                    <div class="mt-2 d-flex flex-wrap gap-2">
+                        @if (string.IsNullOrWhiteSpace(Model.ClanName))
+                        {
+                            <span class="badge bg-white text-dark">No clan linked</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-white text-dark">@clanDisplay</span>
+                        }
+
+                        @if (Model.ExportedAtUtc.HasValue)
+                        {
+                            <span class="badge bg-white text-dark">
+                                Snapshot @Model.ExportedAtUtc.Value.ToString("yyyy-MM-dd HH:mm:ss") UTC
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-white text-dark">No export timestamp</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="village-hero-capabilities">
+                @if (Model.IsOwner)
                 {
-                    <span class="text-muted">(@Model.ClanTag)</span>
+                    <span class="badge bg-green text-white">Can manage own priorities</span>
                 }
-            }
-            else
-            {
-                <span class="text-muted">No clan</span>
-            }
-        </dd>
 
-        <dt class="col-sm-3">Town Hall</dt>
-        <dd class="col-sm-9">@Model.TownHallLevel?.ToString() ?? "Unknown"</dd>
+                @if (Model.CanSuggestPriority)
+                {
+                    <span class="badge bg-azure text-white">Can suggest priorities</span>
+                }
 
-        <dt class="col-sm-3">Builder Hall</dt>
-        <dd class="col-sm-9">@Model.BuilderHallLevel?.ToString() ?? "Unknown"</dd>
-
-        <dt class="col-sm-3">Last Uploaded (UTC)</dt>
-        <dd class="col-sm-9">@Model.LastUploadedAtUtc.ToString("yyyy-MM-dd HH:mm")</dd>
-    </dl>
+                @if (Model.CanManageClanPriorityTemplate)
+                {
+                    <span class="badge bg-purple text-white">Can manage clan templates</span>
+                }
+            </div>
+        </div>
+    </div>
 </div>
 
-<p>
-    <a asp-action="Index" class="btn btn-secondary">Back to My Villages</a>
-    <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-primary">Upload Again</a>
-</p>
+<div class="row row-deck row-cards mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card summary-stat-card">
+            <div class="card-body">
+                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Imported Items</div>
+                <div class="display-6 fw-bold">@totalItems</div>
+                <div class="text-secondary mt-2">Tracked across all sections</div>
+            </div>
+        </div>
+    </div>
 
-<h2>Imported Items</h2>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card summary-stat-card">
+            <div class="card-body">
+                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Upgrading</div>
+                <div class="display-6 fw-bold">@activeTimerCount</div>
+                <div class="text-secondary mt-2">Builder, laboratory, and pet queues are tracked separately</div>
+            </div>
+        </div>
+    </div>
 
-@if (!Model.Items.Any())
+    <div class="col-sm-6 col-lg-3">
+        <div class="card summary-stat-card">
+            <div class="card-body">
+                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Prioritized</div>
+                <div class="display-6 fw-bold">@prioritizedCount</div>
+                <div class="text-secondary mt-2">Shown in the top queue section</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <div class="card summary-stat-card">
+            <div class="card-body">
+                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Hall Capped</div>
+                <div class="display-6 fw-bold">@cappedItems</div>
+                <div class="text-secondary mt-2">Fully at current TH/BH limits</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="card mb-4 detail-search-toolbar section-card">
+    <div class="card-body py-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-lg">
+                <label for="detail-search" class="form-label mb-1">Search village details</label>
+                <input type="text"
+                       id="detail-search"
+                       class="form-control"
+                       placeholder="Search prioritized items, helpers, upgrades, sections, or suggestions..." />
+            </div>
+            <div class="col-lg-auto">
+                <div class="text-secondary small">
+                    Instantly filters suggestion rows, helpers, upgrading cards, and village-state cards.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.IsOwner && Model.PendingSuggestions.Any())
 {
-    <div class="alert alert-info">No items were imported for this village yet.</div>
+    <div class="card section-card mb-4" data-search-card="table">
+        <div class="card-header">
+            <h3 class="card-title">Pending Suggestions</h3>
+            <div class="card-actions">
+                <span class="badge bg-orange-lt text-orange">@pendingCount pending</span>
+            </div>
+        </div>
+
+        @if (Model.PendingSuggestions.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-vcenter card-table compact-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Section</th>
+                            <th>Suggested Rank</th>
+                            <th>From</th>
+                            <th>Message</th>
+                            <th class="w-1"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var suggestion in Model.PendingSuggestions.OrderBy(x => x.SuggestedPriorityRank).ThenBy(x => x.ItemName))
+                        {
+                            <tr class="detail-search-row"
+                                data-search-text="@($"{suggestion.ItemName} {suggestion.ItemType} {sectionLabel(suggestion.Section)} {suggestion.SuggestedByDisplayName} {suggestion.Message}".ToLowerInvariant())">
+                                <td>
+                                    <div class="fw-semibold">@suggestion.ItemName</div>
+                                    <div class="text-secondary small">@suggestion.ItemType</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-blue-lt text-blue">@sectionLabel(suggestion.Section)</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary text-white">#@suggestion.SuggestedPriorityRank</span>
+                                </td>
+                                <td>
+                                    <div>@suggestion.SuggestedByDisplayName</div>
+                                    <div class="text-secondary small">@suggestion.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</div>
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(suggestion.Message))
+                                    {
+                                        <span class="text-secondary">No message</span>
+                                    }
+                                    else
+                                    {
+                                        @suggestion.Message
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <form asp-controller="PrioritySuggestion" asp-action="Respond" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="suggestionId" value="@suggestion.Id" />
+                                            <input type="hidden" name="villageId" value="@Model.Id" />
+                                            <input type="hidden" name="accept" value="true" />
+                                            <button class="btn btn-sm btn-success">Accept</button>
+                                        </form>
+
+                                        <form asp-controller="PrioritySuggestion" asp-action="Respond" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="suggestionId" value="@suggestion.Id" />
+                                            <input type="hidden" name="villageId" value="@Model.Id" />
+                                            <input type="hidden" name="accept" value="false" />
+                                            <button class="btn btn-sm btn-outline-danger">Reject</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+
+
+@if (helpers.Any())
+{
+    <div class="card section-card mb-4" data-search-card="cards">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Helpers</h3>
+                <div class="text-secondary small mt-1">
+                    Helper state is shown separately from the active upgrade queues.
+                </div>
+            </div>
+            <div class="card-actions">
+                <span class="badge bg-dark-lt text-dark">@helperCount helper(s)</span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="row row-cards">
+                @foreach (var helperCard in helpers)
+                {
+                    var helperCountdownAtUtc = helperCard.UpgradeFinishAtUtc ?? helperCard.AvailableAtUtc;
+                    var helperRemaining = helperCountdownAtUtc.HasValue
+                    ? helperCountdownAtUtc.Value - nowUtc
+                    : TimeSpan.Zero;
+
+                    var helperCountdownLabel = helperCard.StatusLabel switch
+                    {
+                        "Leveling" => "Finishes in",
+                        "Assigned" => "Next cycle in",
+                        "Cooldown" => "Available in",
+                        _ => "Available"
+                    };
+
+                    <div class="col-md-6 col-xl-3 detail-card-col"
+                         data-search-text="@($"{helperCard.ItemName} {helperCard.HelperKind} {helperCard.StatusLabel} {helperCard.AssignmentLabel} {sectionLabel(helperCard.Section)}".ToLowerInvariant())">
+                        <div class="card progress-timer-card compact-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                                    <div>
+                                        <div class="fw-bold fs-3">@helperCard.ItemName</div>
+                                        <div class="text-secondary small">@sectionLabel(helperCard.Section) • Helper</div>
+                                    </div>
+
+                                    <span class="badge bg-@helperCard.StatusTone-lt text-@helperCard.StatusTone">@helperCard.StatusLabel</span>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge bg-azure-lt text-azure">Lvl @helperCard.Level</span>
+
+                                    @if (helperCard.IsRecurring)
+                                    {
+                                        <span class="badge bg-purple-lt text-purple">Recurring</span>
+                                    }
+                                    @if (helperCard.TargetIsInferred)
+                                    {
+                                        <span class="badge bg-secondary-lt text-secondary">Target inferred</span>
+                                    }
+                                </div>
+
+                                <div class="mb-3">
+                                    @if (!string.IsNullOrWhiteSpace(helperCard.AssignmentLabel))
+                                    {
+                                        <div class="text-secondary small mb-1">Helping</div>
+                                        <div class="fw-semibold">@helperCard.AssignmentLabel</div>
+                                    }
+                                    else if (helperCard.StatusLabel == "Idle")
+                                    {
+                                        <div class="text-secondary small mb-1">State</div>
+                                        <div class="fw-semibold text-green">Ready</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-secondary small mb-1">State</div>
+                                        <div class="fw-semibold">@helperCard.StatusLabel</div>
+                                    }
+                                </div>
+
+                                @if (helperCountdownAtUtc.HasValue)
+                                {
+                                    <div class="text-secondary small mb-1">@helperCountdownLabel</div>
+
+                                    @if (helperCountdownAtUtc.Value <= nowUtc)
+                                    {
+                                        <div class="fw-semibold text-green">Available now</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="fw-semibold countdown-value live-countdown"
+                                             data-finish-utc="@helperCountdownAtUtc.Value.ToString("O")">
+                                            @formatRemaining(helperRemaining)
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-secondary small mb-1">Availability</div>
+                                    <div class="fw-semibold text-green">Available now</div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(helperCard.RecurringText))
+                                {
+                                    <div class="text-secondary small mt-3">@helperCard.RecurringText</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (timerGroups.Any())
+{
+    foreach (var timerGroup in timerGroups)
+    {
+        <div class="card section-card mb-4" data-search-card="cards">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title">@timerGroup.Key</h3>
+                    <div class="text-secondary small mt-1">
+                        Live countdown from the exported snapshot timestamp.
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <span class="badge bg-orange-lt text-orange">@timerGroup.Count() items</span>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="row row-cards">
+                    @foreach (var timer in timerGroup)
+                    {
+                        var remaining = timer.FinishAtUtc - nowUtc;
+
+                        <div class="col-md-6 col-xl-4 detail-card-col"
+                             data-search-text="@($"{timer.ItemName} {sectionLabel(timer.Section)} {itemTypeLabel(timer.ItemType)} {timer.ProgressGroup} {timer.StatusLabel}".ToLowerInvariant())">
+                            <div class="card progress-timer-card compact-card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <div class="fw-bold fs-3">@timer.ItemName</div>
+                                            <div class="text-secondary small">@sectionLabel(timer.Section) • @itemTypeLabel(timer.ItemType)</div>
+                                        </div>
+
+                                        @if (timer.IsFinishedByNow)
+                                        {
+                                            <span class="badge bg-red-lt text-red">Finished since export</span>
+                                        }
+                                        else
+                                        {
+                                            var timerTone = timer.StatusLabel == "Upgrading" ? "green" : "orange";
+                                            <span class="badge bg-@timerTone-lt text-@timerTone">@timer.StatusLabel</span>
+                                        }
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2 mb-3">
+                                        @if (timer.FromLevel.HasValue && timer.ToLevel.HasValue)
+                                        {
+                                            <span class="badge bg-azure-lt text-azure">
+                                                Lvl @timer.FromLevel → @timer.ToLevel
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-azure-lt text-azure">
+                                                Lvl @timer.Level
+                                            </span>
+                                        }
+
+
+                                        @if (timer.Count > 1)
+                                        {
+                                            <span class="badge bg-secondary-lt text-secondary">Count @timer.Count</span>
+                                        }
+
+                                        @if (timer.IsHelperAssisted)
+                                        {
+                                            <span class="badge bg-purple-lt text-purple">Helper assigned</span>
+                                        }
+                                    </div>
+
+                                    <div class="text-secondary small mb-1">Finishes</div>
+                                    <div class="fw-semibold mb-3">@timer.FinishAtUtc.ToString("yyyy-MM-dd HH:mm:ss") UTC</div>
+
+                                    <div class="text-secondary small mb-1">Countdown</div>
+                                    @if (timer.IsFinishedByNow)
+                                    {
+                                        <div class="text-danger fw-semibold">
+                                            Completed since the snapshot was exported.
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="fw-semibold countdown-value live-countdown"
+                                             data-finish-utc="@timer.FinishAtUtc.ToString("O")">
+                                            @formatRemaining(remaining)
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@if (prioritizedItems.Any())
+{
+    <div class="card section-card mb-4" data-search-card="cards">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Prioritized Items</h3>
+                <div class="text-secondary small mt-1">
+                    Flat top queue sorted by effective priority rank.
+                </div>
+            </div>
+            <div class="card-actions">
+                <span class="badge bg-primary text-white">@prioritizedItems.Count items</span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="row row-cards">
+                @foreach (var item in prioritizedItems)
+                {
+                    var countBelowHallCap = item.MaxCountAtCurrentHall.HasValue && item.CurrentTotalCount < item.MaxCountAtCurrentHall.Value;
+                    var countAtHallCap = item.MaxCountAtCurrentHall.HasValue && item.CurrentTotalCount == item.MaxCountAtCurrentHall.Value;
+                    var countAboveHallCap = item.MaxCountAtCurrentHall.HasValue && item.CurrentTotalCount > item.MaxCountAtCurrentHall.Value;
+                    var countAtGlobalMax = item.GlobalMaxCount.HasValue && item.CurrentTotalCount >= item.GlobalMaxCount.Value;
+
+                    var levelsBelowHallCap = item.MaxLevelAtCurrentHall.HasValue &&
+                    (item.LevelBuckets.Any()
+                    ? item.LevelBuckets.Any(x => x.Level < item.MaxLevelAtCurrentHall.Value)
+                    : item.CurrentMinLevel < item.MaxLevelAtCurrentHall.Value);
+
+                    var levelsFullyAtHallCap = item.MaxLevelAtCurrentHall.HasValue &&
+                    (item.LevelBuckets.Any()
+                    ? item.LevelBuckets.All(x => x.Level >= item.MaxLevelAtCurrentHall.Value)
+                    : item.CurrentMinLevel >= item.MaxLevelAtCurrentHall.Value);
+
+                    var itemFullyCappedForCurrentHall =
+                    (!item.MaxLevelAtCurrentHall.HasValue || levelsFullyAtHallCap) &&
+                    (!item.MaxCountAtCurrentHall.HasValue || item.CurrentTotalCount >= item.MaxCountAtCurrentHall.Value);
+
+                    <div class="col-md-6 col-xl-4 detail-card-col"
+                         data-search-text="@($"{item.ItemName} {sectionLabel(item.Section)} {itemTypeLabel(item.ItemType)} priority ranked".ToLowerInvariant())">
+                        <div class="card item-card compact-card border-primary">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <div class="fw-bold fs-3">@item.ItemName</div>
+                                        <div class="text-secondary small">
+                                            @sectionLabel(item.Section) • @itemTypeLabel(item.ItemType)
+                                        </div>
+                                    </div>
+
+                                    <div class="text-end">
+                                        <span class="badge bg-primary text-white">#@item.EffectivePriorityRank</span>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    @if (itemFullyCappedForCurrentHall)
+                                    {
+                                        <span class="badge bg-green-lt text-green">Fully capped for current hall</span>
+                                    }
+                                    else
+                                    {
+                                        @if (item.MaxLevelAtCurrentHall.HasValue)
+                                        {
+                                            if (levelsBelowHallCap)
+                                            {
+                                                <span class="badge bg-orange-lt text-orange">Levels below hall cap</span>
+                                            }
+                                            else if (levelsFullyAtHallCap)
+                                            {
+                                                <span class="badge bg-green-lt text-green">Levels at hall cap</span>
+                                            }
+                                        }
+
+                                        @if (item.MaxCountAtCurrentHall.HasValue)
+                                        {
+                                            if (countBelowHallCap)
+                                            {
+                                                <span class="badge bg-orange-lt text-orange">Count below TH/BH cap</span>
+                                            }
+                                            else if (countAtHallCap)
+                                            {
+                                                <span class="badge bg-green-lt text-green">Count at TH/BH cap</span>
+                                            }
+                                            else if (countAboveHallCap)
+                                            {
+                                                <span class="badge bg-purple-lt text-purple">Count above TH/BH cap</span>
+                                            }
+                                        }
+                                    }
+
+                                    @if (item.VillagePriorityRank.HasValue)
+                                    {
+                                        <span class="badge bg-blue-lt text-blue">Village #@item.VillagePriorityRank</span>
+                                    }
+
+                                    @if (item.ClanPriorityRank.HasValue)
+                                    {
+                                        <span class="badge bg-purple-lt text-purple">Clan #@item.ClanPriorityRank</span>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(item.EffectivePrioritySource))
+                                    {
+                                        <span class="badge bg-azure-lt text-azure">@item.EffectivePrioritySource</span>
+                                    }
+
+                                    @if (item.HasPendingSuggestion)
+                                    {
+                                        <span class="badge bg-yellow-lt text-yellow">Pending suggestion</span>
+                                    }
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="fw-semibold">Level Breakdown</div>
+                                        <span class="badge bg-primary-lt text-primary">@item.CurrentLevelText</span>
+                                    </div>
+
+                                    <div class="count-status-wrap mb-3">
+                                        @if (item.MaxLevelAtCurrentHall.HasValue)
+                                        {
+                                            <span class="badge bg-orange-lt text-orange">Hall cap @item.MaxLevelAtCurrentHall</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-lt text-secondary">No hall cap data</span>
+                                        }
+
+                                        @if (item.GlobalMaxLevel.HasValue)
+                                        {
+                                            <span class="badge bg-secondary-lt text-secondary">Global max @item.GlobalMaxLevel</span>
+                                        }
+                                    </div>
+
+                                    @if (item.LevelBuckets.Any() && item.GlobalMaxLevel.HasValue && item.GlobalMaxLevel.Value > 0)
+                                    {
+                                        <div class="level-bucket-wrap">
+                                            <div class="level-bucket-header">
+                                                <div class="text-secondary small">Each row shows a level bucket and its count</div>
+                                                <span class="badge bg-secondary-lt text-secondary">Max @item.GlobalMaxLevel</span>
+                                            </div>
+
+                                            @foreach (var bucket in item.LevelBuckets.OrderByDescending(x => x.Level))
+                                            {
+                                                var bucketCurrent = Math.Clamp(bucket.Level, 0, item.GlobalMaxLevel.Value);
+                                                var rawHallCap = item.MaxLevelAtCurrentHall ?? bucketCurrent;
+                                                var hallCapForBar = Math.Clamp(Math.Max(rawHallCap, bucketCurrent), 0, item.GlobalMaxLevel.Value);
+
+                                                var bucketCurrentPct = toPercent(bucketCurrent, item.GlobalMaxLevel.Value);
+                                                var bucketCapPct = toPercent(hallCapForBar, item.GlobalMaxLevel.Value);
+                                                var bucketCapRemainingPct = Math.Max(bucketCapPct - bucketCurrentPct, 0);
+                                                var bucketMaxRemainingPct = Math.Max(100 - bucketCapPct, 0);
+
+                                                <div class="level-bucket-row">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                            <span class="badge bg-blue text-white">Lvl @bucket.Level</span>
+                                                            <span class="badge bg-azure-lt text-azure">x @bucket.Count</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="level-progress-stack">
+                                                        <div class="level-progress-segment level-progress-current" style="width:@(bucketCurrentPct)%"></div>
+
+                                                        @if (bucketCapRemainingPct > 0)
+                                                        {
+                                                            <div class="level-progress-segment level-progress-cap" style="width:@(bucketCapRemainingPct)%"></div>
+                                                        }
+
+                                                        @if (bucketMaxRemainingPct > 0)
+                                                        {
+                                                            <div class="level-progress-segment level-progress-max" style="width:@(bucketMaxRemainingPct)%"></div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-secondary small">No level cap data</div>
+                                    }
+                                </div>
+
+                                <div>
+                                    <div class="fw-semibold mb-2">Count Status</div>
+
+                                    <div class="count-status-wrap">
+                                        <span class="badge bg-azure-lt text-azure">Current: @item.CurrentTotalCount</span>
+
+                                        @if (item.MaxCountAtCurrentHall.HasValue)
+                                        {
+                                            if (countBelowHallCap)
+                                            {
+                                                <span class="badge bg-orange-lt text-orange">Below TH/BH cap (@item.MaxCountAtCurrentHall)</span>
+                                            }
+                                            else if (countAtHallCap)
+                                            {
+                                                <span class="badge bg-green-lt text-green">At TH/BH cap (@item.MaxCountAtCurrentHall)</span>
+                                            }
+                                            else if (countAboveHallCap)
+                                            {
+                                                <span class="badge bg-red-lt text-red">Above TH/BH cap (@item.MaxCountAtCurrentHall)</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-lt text-secondary">No TH/BH count cap data</span>
+                                        }
+
+                                        @if (item.GlobalMaxCount.HasValue)
+                                        {
+                                            if (countAtGlobalMax)
+                                            {
+                                                <span class="badge bg-green-lt text-green">Global max reached (@item.GlobalMaxCount)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-lt text-secondary">Global max @item.GlobalMaxCount</span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (Model.CanSuggestPriority)
+                                {
+                                    <div class="mt-4">
+                                        <div class="fw-semibold mb-2">Priority Suggestion</div>
+
+                                        @if (!item.HasPendingSuggestion)
+                                        {
+                                            <form asp-controller="PrioritySuggestion" asp-action="Create" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="VillageId" value="@Model.Id" />
+                                                <input type="hidden" name="Section" value="@item.Section" />
+                                                <input type="hidden" name="ItemType" value="@item.ItemType" />
+                                                <input type="hidden" name="ItemDataId" value="@item.ItemDataId" />
+
+                                                <div class="d-flex flex-column gap-2">
+                                                    <div class="suggestion-note">
+                                                        Add a short note. The app will place this suggestion after the current queue.
+                                                    </div>
+
+                                                    <textarea name="Message"
+                                              class="form-control form-control-sm"
+                                              rows="2"
+                                              required
+                                              placeholder="Why should this item be moved up?"></textarea>
+
+                                                    <button class="btn btn-sm btn-outline-primary">
+                                                        Suggest Item
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-yellow-lt text-yellow">Already has a pending suggestion</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h2 class="page-title mb-1">Village State</h2>
+        <div class="text-secondary">
+            Non-prioritized items grouped by section and item type.
+        </div>
+    </div>
+</div>
+
+@if (!groupedSections.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <div class="empty">
+                <div class="empty-img">
+                    <span class="avatar avatar-xl">📦</span>
+                </div>
+                <p class="empty-title">No non-prioritized items to show</p>
+                <p class="empty-subtitle text-secondary">
+                    All current items are already surfaced in the prioritized section.
+                </p>
+            </div>
+        </div>
+    </div>
 }
 else
 {
-    <table class="table table-sm table-bordered table-striped">
-        <thead>
-            <tr>
-                <th>Section</th>
-                <th>Type</th>
-                <th>Item Data Id</th>
-                <th>Level</th>
-                <th>Count</th>
-                <th>Upgrade Timer</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var item in Model.Items)
-        {
-            <tr>
-                <td>@item.Section</td>
-                <td>@item.ItemType</td>
-                <td>@item.ItemDataId</td>
-                <td>@item.Level</td>
-                <td>@item.Count</td>
-                <td>@(item.UpgradeTimerSeconds?.ToString() ?? "-")</td>
-            </tr>
-        }
-        </tbody>
-    </table>
+    @foreach (var sectionGroup in groupedSections)
+    {
+        var sectionItems = sectionGroup.ToList();
+        var sectionCapped = sectionItems.Count(x => isAtCurrentHallCap(x));
+
+        <div class="card section-card mb-4" data-search-card="cards">
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title section-heading">@sectionLabel(sectionGroup.Key)</h3>
+                    <div class="text-secondary small mt-1">
+                        @sectionItems.Count items • @sectionCapped capped
+                    </div>
+                </div>
+
+                <div class="card-actions d-flex gap-2">
+                    <span class="badge bg-green-lt text-green">@sectionCapped capped</span>
+                </div>
+            </div>
+
+            <div class="card-body">
+                @foreach (var typeGroup in sectionItems
+                        .GroupBy(x => x.ItemType)
+                        .OrderBy(x => itemTypeOrder(x.Key))
+                        .ThenBy(x => x.Key.ToString()))
+                {
+                    var typeItems = typeGroup.OrderBy(x => x.ItemName).ToList();
+
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="avatar avatar-sm">@itemTypeIcon(typeGroup.Key)</span>
+                                <div>
+                                    <div class="fw-bold">@itemTypeLabel(typeGroup.Key)</div>
+                                    <div class="text-secondary small">@typeItems.Count items</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row row-cards">
+                            @foreach (var item in typeItems)
+                            {
+                                var countBelowHallCap = item.MaxCountAtCurrentHall.HasValue && item.CurrentTotalCount < item.MaxCountAtCurrentHall.Value;
+                                var countAtHallCap = item.MaxCountAtCurrentHall.HasValue && item.CurrentTotalCount == item.MaxCountAtCurrentHall.Value;
+                                var countAboveHallCap = item.MaxCountAtCurrentHall.HasValue && item.CurrentTotalCount > item.MaxCountAtCurrentHall.Value;
+                                var countAtGlobalMax = item.GlobalMaxCount.HasValue && item.CurrentTotalCount >= item.GlobalMaxCount.Value;
+
+                                var levelsBelowHallCap = item.MaxLevelAtCurrentHall.HasValue &&
+                                (item.LevelBuckets.Any()
+                                ? item.LevelBuckets.Any(x => x.Level < item.MaxLevelAtCurrentHall.Value)
+                                : item.CurrentMinLevel < item.MaxLevelAtCurrentHall.Value);
+
+                                var levelsFullyAtHallCap = item.MaxLevelAtCurrentHall.HasValue &&
+                                (item.LevelBuckets.Any()
+                                ? item.LevelBuckets.All(x => x.Level >= item.MaxLevelAtCurrentHall.Value)
+                                : item.CurrentMinLevel >= item.MaxLevelAtCurrentHall.Value);
+
+                                var itemFullyCappedForCurrentHall =
+                                (!item.MaxLevelAtCurrentHall.HasValue || levelsFullyAtHallCap) &&
+                                (!item.MaxCountAtCurrentHall.HasValue || item.CurrentTotalCount >= item.MaxCountAtCurrentHall.Value);
+
+                                <div class="col-md-6 col-xl-4 detail-card-col"
+                                     data-search-text="@($"{item.ItemName} {sectionLabel(item.Section)} {itemTypeLabel(item.ItemType)}".ToLowerInvariant())">
+                                    <div class="card item-card compact-card">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                                <div>
+                                                    <div class="fw-bold fs-3">@item.ItemName</div>
+                                                    <div class="text-secondary small">@itemTypeLabel(item.ItemType)</div>
+                                                </div>
+                                            </div>
+
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                @if (itemFullyCappedForCurrentHall)
+                                                {
+                                                    <span class="badge bg-green-lt text-green">Fully capped for current hall</span>
+                                                }
+                                                else
+                                                {
+                                                    @if (item.MaxLevelAtCurrentHall.HasValue)
+                                                    {
+                                                        if (levelsBelowHallCap)
+                                                        {
+                                                            <span class="badge bg-orange-lt text-orange">Levels below hall cap</span>
+                                                        }
+                                                        else if (levelsFullyAtHallCap)
+                                                        {
+                                                            <span class="badge bg-green-lt text-green">Levels at hall cap</span>
+                                                        }
+                                                    }
+
+                                                    @if (item.MaxCountAtCurrentHall.HasValue)
+                                                    {
+                                                        if (countBelowHallCap)
+                                                        {
+                                                            <span class="badge bg-orange-lt text-orange">Count below TH/BH cap</span>
+                                                        }
+                                                        else if (countAtHallCap)
+                                                        {
+                                                            <span class="badge bg-green-lt text-green">Count at TH/BH cap</span>
+                                                        }
+                                                        else if (countAboveHallCap)
+                                                        {
+                                                            <span class="badge bg-purple-lt text-purple">Count above TH/BH cap</span>
+                                                        }
+                                                    }
+                                                }
+
+                                                @if (item.HasPendingSuggestion)
+                                                {
+                                                    <span class="badge bg-yellow-lt text-yellow">Pending suggestion</span>
+                                                }
+                                            </div>
+
+                                            <div class="mb-4">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <div class="fw-semibold">Level Breakdown</div>
+                                                    <span class="badge bg-primary-lt text-primary">@item.CurrentLevelText</span>
+                                                </div>
+
+                                                <div class="count-status-wrap mb-3">
+                                                    @if (item.MaxLevelAtCurrentHall.HasValue)
+                                                    {
+                                                        <span class="badge bg-orange-lt text-orange">Hall cap @item.MaxLevelAtCurrentHall</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary-lt text-secondary">No hall cap data</span>
+                                                    }
+
+                                                    @if (item.GlobalMaxLevel.HasValue)
+                                                    {
+                                                        <span class="badge bg-secondary-lt text-secondary">Global max @item.GlobalMaxLevel</span>
+                                                    }
+                                                </div>
+
+                                                @if (item.LevelBuckets.Any() && item.GlobalMaxLevel.HasValue && item.GlobalMaxLevel.Value > 0)
+                                                {
+                                                    <div class="level-bucket-wrap">
+                                                        <div class="level-bucket-header">
+                                                            <div class="text-secondary small">Each row shows a level bucket and its count</div>
+                                                            <span class="badge bg-secondary-lt text-secondary">Max @item.GlobalMaxLevel</span>
+                                                        </div>
+
+                                                        @foreach (var bucket in item.LevelBuckets.OrderByDescending(x => x.Level))
+                                                        {
+                                                            var bucketCurrent = Math.Clamp(bucket.Level, 0, item.GlobalMaxLevel.Value);
+                                                            var rawHallCap = item.MaxLevelAtCurrentHall ?? bucketCurrent;
+                                                            var hallCapForBar = Math.Clamp(Math.Max(rawHallCap, bucketCurrent), 0, item.GlobalMaxLevel.Value);
+
+                                                            var bucketCurrentPct = toPercent(bucketCurrent, item.GlobalMaxLevel.Value);
+                                                            var bucketCapPct = toPercent(hallCapForBar, item.GlobalMaxLevel.Value);
+                                                            var bucketCapRemainingPct = Math.Max(bucketCapPct - bucketCurrentPct, 0);
+                                                            var bucketMaxRemainingPct = Math.Max(100 - bucketCapPct, 0);
+
+                                                            <div class="level-bucket-row">
+                                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                                        <span class="badge bg-blue text-white">Lvl @bucket.Level</span>
+                                                                        <span class="badge bg-azure-lt text-azure">x @bucket.Count</span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div class="level-progress-stack">
+                                                                    <div class="level-progress-segment level-progress-current" style="width:@(bucketCurrentPct)%"></div>
+
+                                                                    @if (bucketCapRemainingPct > 0)
+                                                                    {
+                                                                        <div class="level-progress-segment level-progress-cap" style="width:@(bucketCapRemainingPct)%"></div>
+                                                                    }
+
+                                                                    @if (bucketMaxRemainingPct > 0)
+                                                                    {
+                                                                        <div class="level-progress-segment level-progress-max" style="width:@(bucketMaxRemainingPct)%"></div>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="text-secondary small">No level cap data</div>
+                                                }
+                                            </div>
+
+                                            <div>
+                                                <div class="fw-semibold mb-2">Count Status</div>
+
+                                                <div class="count-status-wrap">
+                                                    <span class="badge bg-azure-lt text-azure">Current: @item.CurrentTotalCount</span>
+
+                                                    @if (item.MaxCountAtCurrentHall.HasValue)
+                                                    {
+                                                        if (countBelowHallCap)
+                                                        {
+                                                            <span class="badge bg-orange-lt text-orange">Below TH/BH cap (@item.MaxCountAtCurrentHall)</span>
+                                                        }
+                                                        else if (countAtHallCap)
+                                                        {
+                                                            <span class="badge bg-green-lt text-green">At TH/BH cap (@item.MaxCountAtCurrentHall)</span>
+                                                        }
+                                                        else if (countAboveHallCap)
+                                                        {
+                                                            <span class="badge bg-red-lt text-red">Above TH/BH cap (@item.MaxCountAtCurrentHall)</span>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary-lt text-secondary">No TH/BH count cap data</span>
+                                                    }
+
+                                                    @if (item.GlobalMaxCount.HasValue)
+                                                    {
+                                                        if (countAtGlobalMax)
+                                                        {
+                                                            <span class="badge bg-green-lt text-green">Global max reached (@item.GlobalMaxCount)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary-lt text-secondary">Global max @item.GlobalMaxCount</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            @if (Model.CanSuggestPriority)
+                                            {
+                                                <div class="mt-4">
+                                                    <div class="fw-semibold mb-2">Priority Suggestion</div>
+
+                                                    @if (!item.HasPendingSuggestion)
+                                                    {
+                                                        <form asp-controller="PrioritySuggestion" asp-action="Create" method="post">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="VillageId" value="@Model.Id" />
+                                                            <input type="hidden" name="Section" value="@item.Section" />
+                                                            <input type="hidden" name="ItemType" value="@item.ItemType" />
+                                                            <input type="hidden" name="ItemDataId" value="@item.ItemDataId" />
+
+                                                            <div class="d-flex flex-column gap-2">
+                                                                <div class="suggestion-note">
+                                                                    Add a short note. The app will place this suggestion after the current queue.
+                                                                </div>
+
+                                                                <textarea name="Message"
+                                                  class="form-control form-control-sm"
+                                                  rows="2"
+                                                  required
+                                                  placeholder="Why should this item be moved up?"></textarea>
+
+                                                                <button class="btn btn-sm btn-outline-primary">
+                                                                    Suggest Item
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-yellow-lt text-yellow">Already has a pending suggestion</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            const detailSearch = document.getElementById('detail-search');
+
+            function formatCountdown(diffMs) {
+                if (diffMs <= 0) {
+                    return "Completed";
+                }
+
+                let totalSeconds = Math.floor(diffMs / 1000);
+                const days = Math.floor(totalSeconds / 86400);
+                totalSeconds -= days * 86400;
+                const hours = Math.floor(totalSeconds / 3600);
+                totalSeconds -= hours * 3600;
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds - minutes * 60;
+
+                const hh = String(hours).padStart(2, '0');
+                const mm = String(minutes).padStart(2, '0');
+                const ss = String(seconds).padStart(2, '0');
+
+                if (days > 0) {
+                    return `${days}d ${hh}:${mm}:${ss}`;
+                }
+
+                return `${hh}:${mm}:${ss}`;
+            }
+
+            function tickCountdowns() {
+                document.querySelectorAll('.live-countdown').forEach(function (el) {
+                    const finishUtc = el.getAttribute('data-finish-utc');
+                    if (!finishUtc) {
+                        return;
+                    }
+
+                    const finishAt = new Date(finishUtc).getTime();
+                    const now = Date.now();
+                    const diff = finishAt - now;
+
+                    el.textContent = formatCountdown(diff);
+                });
+            }
+
+            function applyDetailSearch() {
+                const term = (detailSearch?.value || '').trim().toLowerCase();
+
+                document.querySelectorAll('.detail-card-col').forEach(function (el) {
+                    const haystack = (el.getAttribute('data-search-text') || '').toLowerCase();
+                    const matches = term === '' || haystack.includes(term);
+                    el.classList.toggle('is-filtered-out', !matches);
+                });
+
+                document.querySelectorAll('.detail-search-row').forEach(function (el) {
+                    const haystack = (el.getAttribute('data-search-text') || '').toLowerCase();
+                    const matches = term === '' || haystack.includes(term);
+                    el.classList.toggle('is-filtered-out', !matches);
+                });
+
+                document.querySelectorAll('[data-search-card="cards"]').forEach(function (section) {
+                    const visibleCount = section.querySelectorAll('.detail-card-col:not(.is-filtered-out)').length;
+                    section.classList.toggle('d-none', visibleCount === 0);
+                });
+
+                document.querySelectorAll('[data-search-card="table"]').forEach(function (section) {
+                    const visibleCount = section.querySelectorAll('.detail-search-row:not(.is-filtered-out)').length;
+                    section.classList.toggle('d-none', visibleCount === 0);
+                });
+            }
+
+            if (detailSearch) {
+                detailSearch.addEventListener('input', applyDetailSearch);
+            }
+
+            tickCountdowns();
+            applyDetailSearch();
+            setInterval(tickCountdowns, 1000);
+        })();
+    </script>
 }

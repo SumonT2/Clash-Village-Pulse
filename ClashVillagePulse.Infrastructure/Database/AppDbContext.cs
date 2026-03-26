@@ -29,6 +29,7 @@ public class AppDbContext : IdentityDbContext
     public DbSet<StaticItemLevelUpgradeCost> StaticItemLevelUpgradeCosts => Set<StaticItemLevelUpgradeCost>();
     public DbSet<StaticItemRequirement> StaticItemRequirements => Set<StaticItemRequirement>();
     public DbSet<LocalizationText> LocalizationTexts => Set<LocalizationText>();
+    public DbSet<StaticHallItemCap> StaticHallItemCaps => Set<StaticHallItemCap>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -41,6 +42,14 @@ public class AppDbContext : IdentityDbContext
         ConfigureClanPriority(builder);
         ConfigureVillagePriority(builder);
         ConfigureSuggestion(builder);
+
+        ConfigureStaticDataRun(builder);
+        ConfigureStaticDataRunStep(builder);
+        ConfigureStaticItem(builder);
+        ConfigureStaticItemLevel(builder);
+        ConfigureStaticItemLevelUpgradeCost(builder);
+        ConfigureStaticItemRequirement(builder);
+        ConfigureStaticHallItemCap(builder);
         ConfigureLocalizationText(builder);
     }
 
@@ -195,7 +204,8 @@ public class AppDbContext : IdentityDbContext
         }).IsUnique();
     }
 
-        private static void ConfigureSuggestion(ModelBuilder builder)
+
+    private static void ConfigureSuggestion(ModelBuilder builder)
     {
         var e = builder.Entity<PrioritySuggestion>();
 
@@ -211,7 +221,11 @@ public class AppDbContext : IdentityDbContext
 
         e.Property(x => x.Section)
             .HasConversion<int>();
+
+        e.HasIndex(x => new { x.VillageId, x.Status, x.CreatedAtUtc });
+        e.HasIndex(x => new { x.VillageId, x.Section, x.ItemType, x.ItemDataId });
     }
+
     private static void ConfigureStaticDataRun(ModelBuilder builder)
     {
         var e = builder.Entity<StaticDataRun>();
@@ -376,5 +390,26 @@ public class AppDbContext : IdentityDbContext
             .IsUnique();
     }
 
+    private static void ConfigureStaticHallItemCap(ModelBuilder builder)
+    {
+        var e = builder.Entity<StaticHallItemCap>();
 
+        e.ToTable("static_hall_item_caps");
+
+        e.HasKey(x => x.Id);
+
+        e.Property(x => x.Section)
+            .HasConversion<int>();
+
+        e.Property(x => x.ItemType)
+            .HasConversion<int>();
+
+        e.HasIndex(x => new
+        {
+            x.Section,
+            x.HallLevel,
+            x.ItemType,
+            x.ItemDataId
+        }).IsUnique();
+    }
 }

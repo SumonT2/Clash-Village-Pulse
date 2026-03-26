@@ -91,7 +91,13 @@ public class PetsProcessor : StaticDataTargetProcessorBase
                 IsUpgradeable = true
             };
 
-            foreach (var row in group.OrderBy(x => x.Level))
+            var distinctLevels = group
+.OrderBy(x => x.Level)
+.GroupBy(x => x.Level)
+.Select(g => g.First())
+.ToList();
+
+            foreach (var row in distinctLevels)
             {
                 var level = new StaticItemLevel
                 {

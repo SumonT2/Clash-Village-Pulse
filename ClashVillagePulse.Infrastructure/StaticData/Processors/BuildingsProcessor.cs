@@ -90,7 +90,13 @@ public class BuildingsProcessor : StaticDataTargetProcessorBase
                 IsUpgradeable = true
             };
 
-            foreach (var row in group.OrderBy(x => x.BuildingLevel))
+            var distinctLevels = group
+     .OrderBy(x => x.BuildingLevel)
+     .GroupBy(x => x.BuildingLevel)
+     .Select(g => g.First())
+     .ToList();
+
+            foreach (var row in distinctLevels)
             {
                 var level = new StaticItemLevel
                 {
@@ -125,7 +131,7 @@ public class BuildingsProcessor : StaticDataTargetProcessorBase
                     level.Requirements.Add(new StaticItemRequirement
                     {
                         Id = Guid.NewGuid(),
-                        RequirementType = RequirementType.TownHall,
+                        RequirementType = VillageTypeResolver.ResolveTownHallRequirement(row.VillageType),
                         RequiredLevel = row.TownHallLevel.Value
                     });
                 }

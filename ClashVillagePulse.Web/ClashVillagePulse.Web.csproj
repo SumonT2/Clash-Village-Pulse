@@ -4,9 +4,9 @@
     <ProjectReference Include="..\ClashVillagePulse.Application\ClashVillagePulse.Application.csproj" />
     <ProjectReference Include="..\ClashVillagePulse.Infrastructure\ClashVillagePulse.Infrastructure.csproj" />
   </ItemGroup>
-  <ItemGroup>
+  <!--<ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
+  </ItemGroup>-->
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">

@@ -31,6 +31,9 @@ public static class DependencyInjection
         services.AddScoped<IStaticDataTargetProcessor, SpellsProcessor>();
         services.AddScoped<IStaticDataTargetProcessor, PetsProcessor>();
         services.AddScoped<IStaticDataTargetProcessor, EquipmentProcessor>();
+        services.AddScoped<IStaticDataTargetProcessor, TrapsProcessor>();
+        services.AddScoped<IStaticDataTargetProcessor, GuardiansProcessor>();
+        services.AddScoped<TrapsCsvMapper>();
         services.AddScoped<BuildingsCsvMapper>();
         services.AddScoped<StaticDataDecompressor>();
         services.AddScoped<StaticDataRunTracker>();
@@ -43,6 +46,9 @@ public static class DependencyInjection
         services.AddScoped<EquipmentCsvMapper>();
         services.AddHttpClient<IClashApiService, ClashApiService>();
         services.AddScoped<IClashProfileSyncService, ClashProfileSyncService>();
+        services.AddScoped<IPriorityService, PriorityService>();
+        services.AddScoped<VillagerApprenticesCsvMapper>();
+        services.AddScoped<IStaticDataTargetProcessor, HelpersProcessor>();
 
         return services;
     }

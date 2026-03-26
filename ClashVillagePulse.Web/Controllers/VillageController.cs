@@ -1,5 +1,5 @@
 using ClashVillagePulse.Application.Interfaces;
-using ClashVillagePulse.Infrastructure.Services;
+using ClashVillagePulse.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -13,8 +13,8 @@ public class VillageController : Controller
     private readonly IClashProfileSyncService _clashProfileSyncService;
 
     public VillageController(
-     IVillageQueryService villageQueryService,
-     IClashProfileSyncService clashProfileSyncService)
+        IVillageQueryService villageQueryService,
+        IClashProfileSyncService clashProfileSyncService)
     {
         _villageQueryService = villageQueryService;
         _clashProfileSyncService = clashProfileSyncService;
@@ -32,6 +32,17 @@ public class VillageController : Controller
     }
 
     [HttpGet]
+    public async Task<IActionResult> Clan(CancellationToken cancellationToken)
+    {
+        string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userId))
+            return Challenge();
+
+        var villages = await _villageQueryService.GetClanVillagesAsync(userId, cancellationToken);
+        return View(villages);
+    }
+
+    [HttpGet]
     public async Task<IActionResult> Details(Guid id, CancellationToken cancellationToken)
     {
         string? userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -44,6 +55,7 @@ public class VillageController : Controller
 
         return View(village);
     }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SyncProfile(Guid id, CancellationToken cancellationToken)
@@ -52,7 +64,6 @@ public class VillageController : Controller
 
         try
         {
-
             await _clashProfileSyncService.SyncVillageProfileAsync(id, userId, cancellationToken);
             TempData["SuccessMessage"] = "Player and clan info synced successfully.";
         }

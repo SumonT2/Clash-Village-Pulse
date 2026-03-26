@@ -14,6 +14,8 @@ public class PrioritySuggestion
     public ItemType ItemType { get; set; }
     public int ItemDataId { get; set; }
 
+    public int SuggestedPriorityRank { get; set; }
+
     public string? Message { get; set; }
 
     public SuggestionStatus Status { get; set; } = SuggestionStatus.Pending;

@@ -34,7 +34,8 @@ public class CharactersProcessor : StaticDataTargetProcessorBase
                     .Where(x =>
                         !string.IsNullOrWhiteSpace(x.Name) &&
                         x.VisualLevel > 0 &&
-                        x.GlobalId.HasValue)
+                        x.GlobalId.HasValue &&
+                        !IsGuardianCharacter(x))
                     .ToList();
             },
             "Parsed characters CSV.",
@@ -92,7 +93,13 @@ public class CharactersProcessor : StaticDataTargetProcessorBase
                 IsUpgradeable = true
             };
 
-            foreach (var row in group.OrderBy(x => x.VisualLevel))
+            var distinctLevels = group
+                .OrderBy(x => x.VisualLevel)
+                .GroupBy(x => x.VisualLevel)
+                .Select(g => g.First())
+                .ToList();
+
+            foreach (var row in distinctLevels)
             {
                 var level = new StaticItemLevel
                 {
@@ -152,7 +159,20 @@ public class CharactersProcessor : StaticDataTargetProcessorBase
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    private static bool IsGuardianCharacter(CharacterCsvRow row)
+    {
+        if (!string.IsNullOrWhiteSpace(row.TID) &&
+            row.TID.Contains("GUARDIAN", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
 
+        if (row.Name.StartsWith("Guardian ", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return row.Name.Equals("Longshot", StringComparison.OrdinalIgnoreCase)
+            || row.Name.Equals("Smasher", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static ItemType ResolveItemType(CharacterCsvRow row)
     {

@@ -1,62 +1,197 @@
-@model IReadOnlyList<ClashVillagePulse.Application.DTOs.VillageListItemDto>
+﻿@model IReadOnlyList<ClashVillagePulse.Application.DTOs.VillageListItemDto>
 
 @{
     ViewData["Title"] = "My Villages";
+
+    var totalVillages = Model.Count;
+    var clanLinkedVillages = Model.Count(v =>
+        !string.IsNullOrWhiteSpace(v.ClanName) ||
+        !string.IsNullOrWhiteSpace(v.ClanTag));
+
+    var latestUpload = Model
+        .OrderByDescending(v => v.LastUploadedAtUtc)
+        .FirstOrDefault();
+
+    var heroStyles = new[]
+    {
+        "background: linear-gradient(135deg, #206bc4 0%, #4299e1 100%);",
+        "background: linear-gradient(135deg, #f76707 0%, #fd7e14 100%);",
+        "background: linear-gradient(135deg, #0ca678 0%, #20c997 100%);",
+        "background: linear-gradient(135deg, #7048e8 0%, #9775fa 100%);",
+        "background: linear-gradient(135deg, #c2255c 0%, #e64980 100%);",
+        "background: linear-gradient(135deg, #2f9e44 0%, #51cf66 100%);"
+    };
 }
-
-<h1>My Villages</h1>
-
-<p>
-    <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-primary">Upload Village</a>
-</p>
 
 @if (TempData["SuccessMessage"] is string msg)
 {
-    <div class="alert alert-success">@msg</div>
+    <div class="alert alert-success mb-4" role="alert">
+        @msg
+    </div>
 }
+
+<div class="row row-deck row-cards mb-4">
+    <div class="col-sm-6 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Total Villages</div>
+                <div class="display-6 fw-bold">@totalVillages</div>
+                <div class="text-secondary mt-2">All uploaded villages in your account</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Clan Linked</div>
+                <div class="display-6 fw-bold">@clanLinkedVillages</div>
+                <div class="text-secondary mt-2">Villages currently associated with a clan</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-12 col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Latest Upload</div>
+                @if (latestUpload is not null)
+                {
+                    <div class="fw-bold fs-3">@latestUpload.Name</div>
+                    <div class="text-secondary mt-2">
+                        @latestUpload.LastUploadedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC
+                    </div>
+                }
+                else
+                {
+                    <div class="fw-bold fs-3">No uploads yet</div>
+                    <div class="text-secondary mt-2">Upload your first village to get started</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div>
+                <h2 class="card-title mb-1">Your Villages</h2>
+                <div class="text-secondary">
+                    Card-based overview for quick access to village details, clan info, and priorities.
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-primary">
+                    Upload Village
+                </a>
+                <a asp-controller="Village" asp-action="Clan" class="btn btn-outline-secondary">
+                    View Clan Villages
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if (!Model.Any())
 {
-    <div class="alert alert-info">You have not uploaded any villages yet.</div>
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="mb-3">
+                <span class="avatar avatar-xl">🏡</span>
+            </div>
+            <h3 class="mb-2">No villages uploaded yet</h3>
+            <p class="text-secondary mb-4">
+                Upload your first village export to start tracking progress, priorities, and clan recommendations.
+            </p>
+            <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-primary">
+                Upload Your First Village
+            </a>
+        </div>
+    </div>
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Player Tag</th>
-                <th>Clan</th>
-                <th>Last Uploaded (UTC)</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var village in Model)
+    <div class="row row-cards">
+        @for (var i = 0; i < Model.Count; i++)
         {
-            <tr>
-                <td>@village.Name</td>
-                <td>@village.PlayerTag</td>
-                <td>
-                    @if (!string.IsNullOrWhiteSpace(village.ClanName))
-                    {
-                        <span>@village.ClanName</span>
-                        @if (!string.IsNullOrWhiteSpace(village.ClanTag))
-                        {
-                            <span class="text-muted">(@village.ClanTag)</span>
-                        }
-                    }
-                    else
-                    {
-                        <span class="text-muted">No clan</span>
-                    }
-                </td>
-                <td>@village.LastUploadedAtUtc.ToString("yyyy-MM-dd HH:mm")</td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@village.Id" class="btn btn-sm btn-outline-primary">View</a>
-                </td>
-            </tr>
+            var village = Model[i];
+            var heroStyle = heroStyles[i % heroStyles.Length];
+            var clanText = string.IsNullOrWhiteSpace(village.ClanName)
+            ? "No clan"
+            : string.IsNullOrWhiteSpace(village.ClanTag)
+            ? village.ClanName!
+            : $"{village.ClanName} ({village.ClanTag})";
+
+            var initial = string.IsNullOrWhiteSpace(village.Name)
+            ? "V"
+            : village.Name.Substring(0, 1).ToUpperInvariant();
+
+            <div class="col-sm-6 col-lg-4 col-xxl-3">
+                <div class="card h-100">
+                    <div class="card-img-top text-white p-4" style="@heroStyle min-height: 180px; border-top-left-radius: inherit; border-top-right-radius: inherit;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="badge bg-white text-dark">Village</span>
+                            <span class="badge bg-dark text-white">
+                                @village.LastUploadedAtUtc.ToString("dd MMM")
+                            </span>
+                        </div>
+
+                        <div class="mt-4 d-flex align-items-center gap-3">
+                            <span class="avatar avatar-xl bg-white text-dark fw-bold">@initial</span>
+                            <div>
+                                <div class="fs-2 fw-bold">@village.Name</div>
+                                <div class="text-white text-opacity-75">@village.PlayerTag</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Clan</div>
+                            @if (string.IsNullOrWhiteSpace(village.ClanName))
+                            {
+                                <span class="badge bg-secondary-lt text-secondary">No clan</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-blue-lt text-blue">@clanText</span>
+                            }
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Player Tag</div>
+                                <div class="fw-semibold">@village.PlayerTag</div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Last Uploaded</div>
+                                <div class="fw-semibold">@village.LastUploadedAtUtc.ToString("yyyy-MM-dd")</div>
+                                <div class="text-secondary">@village.LastUploadedAtUtc.ToString("HH:mm") UTC</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex gap-2">
+                            <a asp-action="Details"
+                               asp-route-id="@village.Id"
+                               class="btn btn-primary flex-fill">
+                                Open
+                            </a>
+
+                            <a asp-controller="VillagePriority"
+                               asp-action="Edit"
+                               asp-route-villageId="@village.Id"
+                               class="btn btn-outline-secondary">
+                                Priority
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         }
-        </tbody>
-    </table>
+    </div>
 }

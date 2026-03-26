@@ -91,7 +91,13 @@ public class HeroesProcessor : StaticDataTargetProcessorBase
                 IsUpgradeable = true
             };
 
-            foreach (var row in group.OrderBy(x => x.VisualLevel))
+            var distinctLevels = group
+    .OrderBy(x => x.VisualLevel)
+    .GroupBy(x => x.VisualLevel)
+    .Select(g => g.First())
+    .ToList();
+
+            foreach (var row in distinctLevels)
             {
                 var level = new StaticItemLevel
                 {

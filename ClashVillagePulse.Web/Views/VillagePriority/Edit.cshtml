@@ -1,0 +1,800 @@
+﻿@model ClashVillagePulse.Application.DTOs.VillagePriorityEditDto
+
+@{
+    ViewData["Title"] = "Village Priority";
+
+    Func<ClashVillagePulse.Domain.Enums.VillageSection, string> sectionLabel = section => section switch
+    {
+        ClashVillagePulse.Domain.Enums.VillageSection.HomeVillage => "Home Village",
+        ClashVillagePulse.Domain.Enums.VillageSection.BuilderBase => "Builder Base",
+        _ => section.ToString()
+    };
+
+    Func<ClashVillagePulse.Domain.Enums.ItemType, string> itemTypeLabel = itemType => itemType switch
+    {
+        ClashVillagePulse.Domain.Enums.ItemType.Building => "Buildings",
+        ClashVillagePulse.Domain.Enums.ItemType.Trap => "Traps",
+        ClashVillagePulse.Domain.Enums.ItemType.Troop => "Troops",
+        ClashVillagePulse.Domain.Enums.ItemType.Hero => "Heroes",
+        ClashVillagePulse.Domain.Enums.ItemType.Spell => "Spells",
+        ClashVillagePulse.Domain.Enums.ItemType.Pet => "Pets",
+        ClashVillagePulse.Domain.Enums.ItemType.Equipment => "Equipment",
+        ClashVillagePulse.Domain.Enums.ItemType.SiegeMachine => "Siege Machines",
+        ClashVillagePulse.Domain.Enums.ItemType.Helper => "Helpers",
+        ClashVillagePulse.Domain.Enums.ItemType.Guardian => "Guardians",
+        _ => itemType.ToString()
+    };
+
+    Func<ClashVillagePulse.Domain.Enums.ItemType, string> itemTypeIcon = itemType => itemType switch
+    {
+        ClashVillagePulse.Domain.Enums.ItemType.Building => "🏰",
+        ClashVillagePulse.Domain.Enums.ItemType.Trap => "💣",
+        ClashVillagePulse.Domain.Enums.ItemType.Troop => "⚔️",
+        ClashVillagePulse.Domain.Enums.ItemType.Hero => "🛡️",
+        ClashVillagePulse.Domain.Enums.ItemType.Spell => "✨",
+        ClashVillagePulse.Domain.Enums.ItemType.Pet => "🐾",
+        ClashVillagePulse.Domain.Enums.ItemType.Equipment => "🧰",
+        ClashVillagePulse.Domain.Enums.ItemType.SiegeMachine => "🚪",
+        ClashVillagePulse.Domain.Enums.ItemType.Helper => "🧑‍🔧",
+        ClashVillagePulse.Domain.Enums.ItemType.Guardian => "🗿",
+        _ => "📦"
+    };
+
+    Func<ClashVillagePulse.Domain.Enums.ItemType, int> itemTypeOrder = itemType => itemType switch
+    {
+        ClashVillagePulse.Domain.Enums.ItemType.Building => 1,
+        ClashVillagePulse.Domain.Enums.ItemType.Trap => 2,
+        ClashVillagePulse.Domain.Enums.ItemType.Hero => 3,
+        ClashVillagePulse.Domain.Enums.ItemType.Guardian => 4,
+        ClashVillagePulse.Domain.Enums.ItemType.Troop => 5,
+        ClashVillagePulse.Domain.Enums.ItemType.Spell => 6,
+        ClashVillagePulse.Domain.Enums.ItemType.Pet => 7,
+        ClashVillagePulse.Domain.Enums.ItemType.Equipment => 8,
+        ClashVillagePulse.Domain.Enums.ItemType.SiegeMachine => 9,
+        ClashVillagePulse.Domain.Enums.ItemType.Helper => 10,
+        _ => 99
+    };
+
+    var indexedItems = Model.Items
+        .Select((item, index) => new { Item = item, Index = index })
+        .ToList();
+
+    var groupedSections = indexedItems
+        .GroupBy(x => x.Item.Section)
+        .OrderBy(x => x.Key == ClashVillagePulse.Domain.Enums.VillageSection.HomeVillage ? 0 : 1)
+        .ToList();
+
+    var prioritizedCount = Model.Items.Count(x => x.VillagePriorityRank.HasValue);
+    var clanReferenceCount = Model.Items.Count(x => x.ClanPriorityRank.HasValue);
+    var villageInitial = string.IsNullOrWhiteSpace(Model.VillageName)
+        ? "V"
+        : Model.VillageName.Substring(0, 1).ToUpperInvariant();
+}
+
+<style>
+    .priority-hero-card {
+        border: 0;
+    }
+
+    .priority-hero {
+        padding: 1rem 1.1rem;
+        color: #fff;
+        background: linear-gradient(135deg, rgba(32, 107, 196, .96) 0%, rgba(112, 72, 232, .94) 100%);
+    }
+
+        .priority-hero .badge.bg-white {
+            background: rgba(255, 255, 255, .92) !important;
+        }
+
+    .priority-hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+        .priority-hero-actions .btn {
+            --tblr-btn-padding-y: .35rem;
+            --tblr-btn-padding-x: .65rem;
+            --tblr-btn-font-size: .78rem;
+        }
+
+        .priority-hero-actions .btn-icon {
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+        }
+
+    .priority-hero-avatar {
+        width: 3.1rem;
+        height: 3.1rem;
+        font-size: 1.55rem;
+        border-radius: .75rem;
+    }
+
+    .priority-hero-name {
+        font-size: 1.8rem;
+        line-height: 1.08;
+    }
+
+    .priority-hero-subtle {
+        color: rgba(255, 255, 255, .80);
+    }
+
+    .priority-hero-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+        margin-top: .85rem;
+    }
+
+        .priority-hero-badges .badge {
+            font-size: .72rem;
+            box-shadow: 0 .125rem .25rem rgba(15, 23, 42, .12);
+        }
+
+    .priority-metric-card .card-body {
+        padding: .9rem 1rem;
+    }
+
+    .priority-metric-card .display-6 {
+        font-size: 1.5rem;
+        line-height: 1.05;
+    }
+
+    .priority-page-toolbar {
+        position: sticky;
+        top: .85rem;
+        z-index: 24;
+        backdrop-filter: blur(6px);
+    }
+
+        .priority-page-toolbar .card-body {
+            background: rgba(255, 255, 255, .92);
+            padding: .85rem 1rem;
+        }
+
+    .priority-queue-card {
+        border: 1px dashed rgba(98, 105, 118, .28);
+        background: rgba(248, 250, 252, .82);
+        height: 100%;
+    }
+
+    .priority-item-card {
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(98, 105, 118, .16);
+        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+
+        .priority-item-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 4px;
+            background: #E6E6FA;
+        }
+
+        .priority-item-card .card-body,
+        .priority-queue-card .card-body {
+            padding: .85rem .9rem;
+        }
+
+        .priority-item-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .07);
+        }
+
+        .priority-item-card.is-prioritized {
+            border-color: rgba(32, 107, 196, .32);
+            box-shadow: 0 0 0 1px rgba(32, 107, 196, .08);
+        }
+
+            .priority-item-card.is-prioritized::before {
+                background: rgba(250, 173, 20, .92);
+            }
+
+    .priority-rank-pill {
+        min-width: 2rem;
+        text-align: center;
+    }
+
+    .priority-empty,
+    .priority-search-empty {
+        text-align: center;
+        padding: 1.6rem 1rem;
+        color: var(--tblr-secondary);
+        border: 1px dashed rgba(98, 105, 118, .25);
+        border-radius: 12px;
+        background: rgba(248, 250, 252, .72);
+    }
+
+    .priority-search-empty {
+        display: none;
+    }
+
+        .priority-search-empty.is-visible {
+            display: block;
+        }
+
+    .priority-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+    }
+
+    .priority-group-heading {
+        margin-bottom: 0;
+    }
+
+    .item-meta-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+    }
+
+    .priority-section-card > .card-header,
+    .priority-queue-shell > .card-header {
+        padding: .75rem .95rem;
+    }
+
+    .priority-section-card > .card-body,
+    .priority-queue-shell > .card-body {
+        padding: .95rem;
+    }
+
+    .priority-item-col.is-filtered-out,
+    .priority-type-block.is-filtered-out,
+    .priority-section-card.is-filtered-out {
+        display: none;
+    }
+
+    .priority-inline-note {
+        font-size: .75rem;
+    }
+
+    .priority-card-title {
+        font-size: 1rem;
+        line-height: 1.25;
+    }
+
+    .priority-queue-list > [class*="col-"] {
+        display: flex;
+    }
+
+    .priority-queue-list .priority-queue-card,
+    .priority-item-col .priority-item-card {
+        width: 100%;
+    }
+
+    @@media (max-width: 991.98px) {
+        .priority-page-toolbar {
+            top: .5rem;
+        }
+
+        .priority-hero-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .priority-hero-name {
+            font-size: 1.4rem;
+        }
+    }
+</style>
+
+@if (TempData["SuccessMessage"] is string success)
+{
+    <div class="alert alert-success alert-dismissible mb-4" role="alert">
+        <div>@success</div>
+        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] is string error)
+{
+    <div class="alert alert-danger alert-dismissible mb-4" role="alert">
+        <div>@error</div>
+        <a class="btn-close" data-bs-dismiss="alert" aria-label="close"></a>
+    </div>
+}
+
+<form asp-action="Save" method="post" id="village-priority-form">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="villageId" value="@Model.VillageId" />
+
+    <div class="card mb-4 overflow-hidden priority-hero-card">
+        <div class="card-body p-0">
+            <div class="priority-hero">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="badge bg-white text-dark">Village Priority</span>
+                        <span class="badge bg-dark text-white">Manual + Quick Star</span>
+                        <span class="badge bg-white text-dark">@Model.Items.Count item(s)</span>
+                    </div>
+
+                    <div class="priority-hero-actions">
+                        <a asp-controller="Village"
+                           asp-action="Details"
+                           asp-route-id="@Model.VillageId"
+                           class="btn btn-icon btn-outline-light"
+                           title="Back to Village Details"
+                           aria-label="Back to Village Details">
+                            <span aria-hidden="true">←</span>
+                        </a>
+
+                        <button type="submit" class="btn btn-light text-primary fw-semibold">
+                            Save Priority
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <span class="avatar bg-white text-dark fw-bold priority-hero-avatar">@villageInitial</span>
+
+                    <div class="flex-fill">
+                        <div class="priority-hero-name fw-bold">@Model.VillageName</div>
+                        <div class="priority-hero-subtle">
+                            Search faster, star items into the queue, reorder them from the top block, then save.
+                        </div>
+
+                        <div class="priority-hero-badges">
+                            <span class="badge bg-white text-dark">Village queue: @prioritizedCount</span>
+                            <span class="badge bg-white text-dark">Clan reference: @clanReferenceCount</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cards mb-4">
+        <div class="col-sm-6 col-lg-4">
+            <div class="card priority-metric-card">
+                <div class="card-body">
+                    <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Available Items</div>
+                    <div class="display-6 fw-bold" id="available-items-count">@Model.Items.Count</div>
+                    <div class="text-secondary small mt-2">Visible items in this village</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-4">
+            <div class="card priority-metric-card">
+                <div class="card-body">
+                    <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Prioritized Now</div>
+                    <div class="display-6 fw-bold" id="priority-count-summary">@prioritizedCount</div>
+                    <div class="text-secondary small mt-2">Items currently in your queue</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-12 col-lg-4">
+            <div class="card priority-metric-card">
+                <div class="card-body">
+                    <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Clan Guidance</div>
+                    <div class="display-6 fw-bold">@clanReferenceCount</div>
+                    <div class="text-secondary small mt-2">Items that already have clan template ranks</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 priority-page-toolbar shadow-sm">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg">
+                    <label for="priority-search" class="form-label mb-1">Search items</label>
+                    <input type="text"
+                           id="priority-search"
+                           class="form-control"
+                           placeholder="Search by item name, section, or type..." />
+                </div>
+
+                <div class="col-sm-6 col-lg-auto">
+                    <div class="text-secondary small mb-1">Queue</div>
+                    <div class="fw-semibold" id="toolbar-queue-summary">@prioritizedCount prioritized</div>
+                    <div class="text-secondary small">Use search to narrow the item list.</div>
+                </div>
+
+                <div class="col-sm-6 col-lg-auto">
+                    <div class="d-flex gap-2 justify-content-lg-end">
+                        <button type="button" class="btn btn-outline-secondary" id="clear-search-btn">
+                            Clear Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4 priority-queue-shell">
+        <div class="card-header">
+            <div>
+                <h3 class="card-title">Prioritized Items</h3>
+                <div class="text-secondary small mt-1">
+                    Top item becomes rank 1. Reorder here only.
+                </div>
+            </div>
+            <div class="card-actions">
+                <span class="badge bg-primary-lt text-primary" id="priority-count-badge">@prioritizedCount items</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="priority-queue-empty" class="priority-empty">
+                No prioritized items yet. Star items below to build your queue.
+            </div>
+            <div id="priority-queue-list" class="row row-cards priority-queue-list"></div>
+        </div>
+    </div>
+
+    <div id="priority-search-empty" class="priority-search-empty mb-4">
+        No items matched your search.
+    </div>
+
+    @foreach (var sectionGroup in groupedSections)
+    {
+        <div class="card mb-4 priority-section-card" data-section-card>
+            <div class="card-header">
+                <div>
+                    <h3 class="card-title priority-group-heading">@sectionLabel(sectionGroup.Key)</h3>
+                    <div class="text-secondary small mt-1">@sectionGroup.Count() items</div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                @foreach (var typeGroup in sectionGroup
+                            .GroupBy(x => x.Item.ItemType)
+                            .OrderBy(x => itemTypeOrder(x.Key))
+                            .ThenBy(x => x.Key.ToString()))
+                {
+                    <div class="mb-4 priority-type-block" data-type-block>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="avatar avatar-sm">@itemTypeIcon(typeGroup.Key)</span>
+                            <div>
+                                <div class="fw-bold">@itemTypeLabel(typeGroup.Key)</div>
+                                <div class="text-secondary small">@typeGroup.Count() item(s)</div>
+                            </div>
+                        </div>
+
+                        <div class="row row-cards">
+                            @foreach (var entry in typeGroup.OrderBy(x => x.Item.ItemName))
+                            {
+                                var searchText = string.Join(" ", new[]
+                                {
+                                        entry.Item.ItemName,
+                                        sectionLabel(entry.Item.Section),
+                                        itemTypeLabel(entry.Item.ItemType),
+                                        entry.Item.CurrentLevelText,
+                                        entry.Item.CurrentTotalCount.ToString(),
+                                        entry.Item.ClanPriorityRank?.ToString() ?? string.Empty,
+                                        entry.Item.EffectivePrioritySource ?? string.Empty
+                                        }).ToLowerInvariant();
+
+                                <div class="col-md-6 col-xl-4 priority-item-col"
+                                     data-item-col
+                                     data-search-text="@searchText">
+                                    <div class="card priority-item-card @(entry.Item.VillagePriorityRank.HasValue ? "is-prioritized" : string.Empty)"
+                                         data-index="@entry.Index"
+                                         data-item-name="@entry.Item.ItemName"
+                                         data-section-label="@sectionLabel(entry.Item.Section)"
+                                         data-type-label="@itemTypeLabel(entry.Item.ItemType)"
+                                         data-current-level="@entry.Item.CurrentLevelText"
+                                         data-current-count="@entry.Item.CurrentTotalCount"
+                                         data-clan-rank="@(entry.Item.ClanPriorityRank?.ToString() ?? string.Empty)">
+                                        <div class="card-body">
+                                            <input type="hidden" name="items[@entry.Index].Section" value="@entry.Item.Section" />
+                                            <input type="hidden" name="items[@entry.Index].ItemType" value="@entry.Item.ItemType" />
+                                            <input type="hidden" name="items[@entry.Index].ItemDataId" value="@entry.Item.ItemDataId" />
+                                            <input type="hidden"
+                                                   name="items[@entry.Index].PriorityRank"
+                                                   id="priority-rank-@entry.Index"
+                                                   data-index="@entry.Index"
+                                                   class="priority-rank-input"
+                                                   value="@entry.Item.VillagePriorityRank" />
+
+                                            <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                                                <div>
+                                                    <div class="fw-bold priority-card-title">@entry.Item.ItemName</div>
+                                                    <div class="text-secondary small">@itemTypeLabel(entry.Item.ItemType)</div>
+                                                </div>
+
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-primary text-white priority-rank-pill d-none"
+                                                          id="rank-pill-@entry.Index"></span>
+
+                                                    <button type="button"
+                                                            class="btn btn-sm @(entry.Item.VillagePriorityRank.HasValue ? "btn-warning" : "btn-outline-warning") priority-toggle-btn"
+                                                            data-index="@entry.Index">
+                                                        @(entry.Item.VillagePriorityRank.HasValue ? "★ Priority" : "☆ Add")
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="item-meta-grid mb-3">
+                                                <span class="badge bg-azure-lt text-azure">Lvl @entry.Item.CurrentLevelText</span>
+                                                <span class="badge bg-secondary-lt text-secondary">Count @entry.Item.CurrentTotalCount</span>
+
+                                                @if (entry.Item.ClanPriorityRank.HasValue)
+                                                {
+                                                    <span class="badge bg-purple-lt text-purple">Clan #@entry.Item.ClanPriorityRank</span>
+                                                }
+
+                                                @if (entry.Item.EffectivePrioritySource == "Village")
+                                                {
+                                                    <span class="badge bg-blue-lt text-blue">Village-owned</span>
+                                                }
+                                            </div>
+
+                                            <div class="text-secondary priority-inline-note">
+                                                @sectionLabel(entry.Item.Section)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const queueList = document.getElementById('priority-queue-list');
+            const queueEmpty = document.getElementById('priority-queue-empty');
+            const priorityCountBadge = document.getElementById('priority-count-badge');
+            const priorityCountSummary = document.getElementById('priority-count-summary');
+            const toolbarQueueSummary = document.getElementById('toolbar-queue-summary');
+            const availableItemsCount = document.getElementById('available-items-count');
+            const prioritySearch = document.getElementById('priority-search');
+            const clearSearchButton = document.getElementById('clear-search-btn');
+            const prioritySearchEmpty = document.getElementById('priority-search-empty');
+
+            function getRankInput(index) {
+                return document.getElementById(`priority-rank-${index}`);
+            }
+
+            function getCard(index) {
+                return document.querySelector(`.priority-item-card[data-index="${index}"]`);
+            }
+
+            function getPrioritizedOrder() {
+                return Array.from(document.querySelectorAll('.priority-rank-input'))
+                    .map(input => {
+                        const rank = parseInt(input.value || '0', 10);
+                        return {
+                            index: parseInt(input.dataset.index, 10),
+                            rank: isNaN(rank) ? 0 : rank
+                        };
+                    })
+                    .filter(x => x.rank > 0)
+                    .sort((a, b) => a.rank - b.rank)
+                    .map(x => x.index);
+            }
+
+            function setPrioritizedOrder(order) {
+                document.querySelectorAll('.priority-rank-input').forEach(input => input.value = '');
+
+                order.forEach((index, position) => {
+                    const input = getRankInput(index);
+                    if (input) {
+                        input.value = String(position + 1);
+                    }
+                });
+
+                renderQueue();
+                refreshCards();
+                applySearchFilter();
+            }
+
+            function togglePriority(index) {
+                let order = getPrioritizedOrder();
+
+                if (order.includes(index)) {
+                    order = order.filter(x => x !== index);
+                } else {
+                    order.push(index);
+                }
+
+                setPrioritizedOrder(order);
+            }
+
+            function movePriority(index, direction) {
+                const order = getPrioritizedOrder();
+                const current = order.indexOf(index);
+
+                if (current < 0) {
+                    return;
+                }
+
+                const target = current + direction;
+                if (target < 0 || target >= order.length) {
+                    return;
+                }
+
+                const temp = order[current];
+                order[current] = order[target];
+                order[target] = temp;
+
+                setPrioritizedOrder(order);
+            }
+
+            function removePriority(index) {
+                const order = getPrioritizedOrder().filter(x => x !== index);
+                setPrioritizedOrder(order);
+            }
+
+            function refreshCards() {
+                const order = getPrioritizedOrder();
+                const prioritizedSet = new Set(order);
+
+                document.querySelectorAll('.priority-item-card').forEach(card => {
+                    const index = parseInt(card.dataset.index, 10);
+                    const isPrioritized = prioritizedSet.has(index);
+                    const button = card.querySelector('.priority-toggle-btn');
+                    const pill = card.querySelector('.priority-rank-pill');
+
+                    card.classList.toggle('is-prioritized', isPrioritized);
+
+                    if (button) {
+                        button.className = `btn btn-sm ${isPrioritized ? 'btn-warning' : 'btn-outline-warning'} priority-toggle-btn`;
+                        button.textContent = isPrioritized ? '★ Priority' : '☆ Add';
+                    }
+
+                    if (pill) {
+                        if (isPrioritized) {
+                            pill.classList.remove('d-none');
+                            pill.textContent = `#${order.indexOf(index) + 1}`;
+                        } else {
+                            pill.classList.add('d-none');
+                            pill.textContent = '';
+                        }
+                    }
+                });
+
+                priorityCountBadge.textContent = `${order.length} item${order.length === 1 ? '' : 's'}`;
+                priorityCountSummary.textContent = String(order.length);
+                toolbarQueueSummary.textContent = `${order.length} prioritized`;
+            }
+
+            function renderQueue() {
+                const order = getPrioritizedOrder();
+                queueList.innerHTML = '';
+
+                if (order.length === 0) {
+                    queueEmpty.classList.remove('d-none');
+                    return;
+                }
+
+                queueEmpty.classList.add('d-none');
+
+                order.forEach((index, position) => {
+                    const card = getCard(index);
+                    if (!card) {
+                        return;
+                    }
+
+                    const name = card.dataset.itemName || 'Item';
+                    const sectionText = card.dataset.sectionLabel || '';
+                    const typeLabel = card.dataset.typeLabel || '';
+                    const currentLevel = card.dataset.currentLevel || '-';
+                    const currentCount = card.dataset.currentCount || '-';
+                    const clanRank = card.dataset.clanRank || '';
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'col-md-6 col-xl-4';
+
+                    wrapper.innerHTML = `
+                        <div class="card priority-queue-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                                    <div>
+                                        <div class="fw-bold priority-card-title">${name}</div>
+                                        <div class="text-secondary small">${sectionText} • ${typeLabel}</div>
+                                    </div>
+                                    <span class="badge bg-primary text-white">#${position + 1}</span>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2 mb-3">
+                                    <span class="badge bg-azure-lt text-azure">Lvl ${currentLevel}</span>
+                                    <span class="badge bg-secondary-lt text-secondary">Count ${currentCount}</span>
+                                    ${clanRank ? `<span class="badge bg-purple-lt text-purple">Clan #${clanRank}</span>` : ''}
+                                </div>
+
+                                <div class="priority-toolbar">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary move-up-btn" data-index="${index}">↑ Up</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary move-down-btn" data-index="${index}">↓ Down</button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-priority-btn" data-index="${index}">Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    queueList.appendChild(wrapper);
+                });
+            }
+
+            function applySearchFilter() {
+                const term = (prioritySearch?.value || '').trim().toLowerCase();
+                let visibleItemCount = 0;
+
+                document.querySelectorAll('[data-item-col]').forEach(col => {
+                    const searchText = col.dataset.searchText || '';
+                    const matches = term === '' || searchText.includes(term);
+                    col.classList.toggle('is-filtered-out', !matches);
+                    if (matches) {
+                        visibleItemCount += 1;
+                    }
+                });
+
+                document.querySelectorAll('[data-type-block]').forEach(block => {
+                    const hasVisibleItems = block.querySelector('[data-item-col]:not(.is-filtered-out)');
+                    block.classList.toggle('is-filtered-out', !hasVisibleItems);
+                });
+
+                document.querySelectorAll('[data-section-card]').forEach(sectionCard => {
+                    const hasVisibleTypes = sectionCard.querySelector('[data-type-block]:not(.is-filtered-out)');
+                    sectionCard.classList.toggle('is-filtered-out', !hasVisibleTypes);
+                });
+
+                if (availableItemsCount) {
+                    availableItemsCount.textContent = String(visibleItemCount);
+                }
+
+                if (prioritySearchEmpty) {
+                    const showEmpty = term !== '' && visibleItemCount === 0;
+                    prioritySearchEmpty.classList.toggle('is-visible', showEmpty);
+                }
+            }
+
+            document.addEventListener('click', function (event) {
+                const toggleButton = event.target.closest('.priority-toggle-btn');
+                if (toggleButton) {
+                    togglePriority(parseInt(toggleButton.dataset.index, 10));
+                    return;
+                }
+
+                const upButton = event.target.closest('.move-up-btn');
+                if (upButton) {
+                    movePriority(parseInt(upButton.dataset.index, 10), -1);
+                    return;
+                }
+
+                const downButton = event.target.closest('.move-down-btn');
+                if (downButton) {
+                    movePriority(parseInt(downButton.dataset.index, 10), 1);
+                    return;
+                }
+
+                const removeButton = event.target.closest('.remove-priority-btn');
+                if (removeButton) {
+                    removePriority(parseInt(removeButton.dataset.index, 10));
+                }
+            });
+
+            if (prioritySearch) {
+                prioritySearch.addEventListener('input', applySearchFilter);
+            }
+
+            if (clearSearchButton) {
+                clearSearchButton.addEventListener('click', function () {
+                    if (prioritySearch) {
+                        prioritySearch.value = '';
+                        applySearchFilter();
+                        prioritySearch.focus();
+                    }
+                });
+            }
+
+            renderQueue();
+            refreshCards();
+            applySearchFilter();
+        })();
+    </script>
+}

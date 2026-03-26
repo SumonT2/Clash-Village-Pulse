@@ -10,5 +10,14 @@ public sealed class VillageDetailsDto
     public int? TownHallLevel { get; set; }
     public int? BuilderHallLevel { get; set; }
     public DateTime LastUploadedAtUtc { get; set; }
-    public IReadOnlyList<VillageItemLevelDto> Items { get; set; } = Array.Empty<VillageItemLevelDto>();
+    public DateTime? ExportedAtUtc { get; set; }
+
+    public bool IsOwner { get; set; }
+    public bool CanSuggestPriority { get; set; }
+    public bool CanManageClanPriorityTemplate { get; set; }
+
+    public IReadOnlyList<VillageHelperStatusDto> Helpers { get; set; } = Array.Empty<VillageHelperStatusDto>();
+    public IReadOnlyList<VillageActiveTimerDto> ActiveTimers { get; set; } = Array.Empty<VillageActiveTimerDto>();
+    public IReadOnlyList<VillageItemStateDto> ItemStates { get; set; } = Array.Empty<VillageItemStateDto>();
+    public IReadOnlyList<PrioritySuggestionDto> PendingSuggestions { get; set; } = Array.Empty<PrioritySuggestionDto>();
 }
