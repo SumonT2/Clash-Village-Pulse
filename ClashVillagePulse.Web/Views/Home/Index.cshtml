@@ -1,8 +1,841 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model ClashVillagePulse.Web.Models.HomeDashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+
+    var totalChartMax = Math.Max(1, Model.UploadTrend.DefaultIfEmpty().Max(x => x?.Value ?? 0));
+    var hallChartMax = Math.Max(1, Model.TownHallDistribution.DefaultIfEmpty().Max(x => x?.Value ?? 0));
+
+    var donutTotal = Math.Max(1, Model.TotalVillages);
+    var freshCount = Model.TotalVillages - Model.StaleVillages - Math.Max(0, Model.TotalVillages - Model.StaleVillages - Model.ClanLinkedVillages < 0 ? 0 : 0);
+    var agingCount = Math.Max(0, Model.TotalVillages - Model.StaleVillages - freshCount);
+
+    var freshVillages = Model.Villages.Count(x => x.FreshnessTone == "green");
+    var agingVillages = Model.Villages.Count(x => x.FreshnessTone == "orange");
+    var staleVillages = Model.Villages.Count(x => x.FreshnessTone == "red");
+
+    var freshAngle = donutTotal == 0 ? 0 : Math.Round((freshVillages / (double)donutTotal) * 360d, 2);
+    var agingAngle = donutTotal == 0 ? 0 : Math.Round((agingVillages / (double)donutTotal) * 360d, 2);
+    var staleAngle = donutTotal == 0 ? 0 : Math.Round((staleVillages / (double)donutTotal) * 360d, 2);
+
+    var donutStyle = $"background: conic-gradient(" +
+                     $"rgba(46, 184, 92, .92) 0deg {freshAngle}deg, " +
+                     $"rgba(247, 103, 7, .90) {freshAngle}deg {freshAngle + agingAngle}deg, " +
+                     $"rgba(214, 57, 57, .92) {freshAngle + agingAngle}deg 360deg);";
+
+    string freshnessText(DateTime? exportedAtUtc, DateTime lastUploadedAtUtc)
+    {
+        var reference = exportedAtUtc ?? lastUploadedAtUtc;
+        var age = DateTime.UtcNow - reference;
+
+        if (age.TotalDays >= 1)
+        {
+            return $"{Math.Floor(age.TotalDays)}d ago";
+        }
+
+        if (age.TotalHours >= 1)
+        {
+            return $"{Math.Floor(age.TotalHours)}h ago";
+        }
+
+        return $"{Math.Max(1, Math.Floor(age.TotalMinutes))}m ago";
+    }
+
+    string heroInitial(string text)
+        => string.IsNullOrWhiteSpace(text) ? "V" : text.Substring(0, 1).ToUpperInvariant();
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<style>
+    .dashboard-hero {
+        position: relative;
+        overflow: hidden;
+        border: 0;
+        /* border-radius: 20px; */
+        background:
+            radial-gradient(circle at top right, rgba(255,255,255,.16), transparent 30%),
+            linear-gradient(135deg, #1f4fa3 0%, #2f7ae5 100%);
+        color: #fff;
+    }
+
+    .dashboard-hero .card-body {
+        padding: 1rem 1.1rem;
+    }
+
+    .dashboard-hero .hero-subtitle,
+    .dashboard-hero .hero-meta {
+        color: rgba(255,255,255,.82);
+    }
+
+    .dashboard-hero .btn-hero-light {
+        background: rgba(255,255,255,.14);
+        border-color: rgba(255,255,255,.18);
+        color: #fff;
+    }
+
+    .dashboard-hero .btn-hero-light:hover {
+        background: rgba(255,255,255,.2);
+        color: #fff;
+    }
+
+    .dashboard-stat-card,
+    .dashboard-chart-card,
+    .dashboard-recommendation-card,
+    .dashboard-village-card,
+    .dashboard-focus-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(98, 105, 118, .14);
+        background: rgba(255,255,255,.97);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, .04);
+    }
+
+    .dashboard-stat-card::before,
+    .dashboard-chart-card::before,
+    .dashboard-recommendation-card::before,
+    .dashboard-village-card::before,
+    .dashboard-focus-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: rgba(32, 107, 196, .78);
+    }
+
+    .dashboard-recommendation-card.tone-green::before { background: rgba(46, 184, 92, .82); }
+    .dashboard-recommendation-card.tone-orange::before { background: rgba(247, 103, 7, .82); }
+    .dashboard-recommendation-card.tone-red::before { background: rgba(214, 57, 57, .82); }
+    .dashboard-recommendation-card.tone-purple::before { background: rgba(112, 72, 232, .82); }
+
+    .dashboard-stat-card .card-body,
+    .dashboard-chart-card .card-body,
+    .dashboard-recommendation-card .card-body,
+    .dashboard-village-card .card-body,
+    .dashboard-focus-card .card-body {
+        padding: .9rem;
+    }
+
+    .dashboard-stat-value {
+        font-size: 1.6rem;
+        line-height: 1;
+        font-weight: 700;
+    }
+
+    .dashboard-section-title {
+        font-size: .78rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: #667382;
+        font-weight: 700;
+    }
+
+    .dashboard-toolbar {
+        position: sticky;
+        top: 1rem;
+        z-index: 22;
+    }
+
+    .dashboard-village-card {
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    .dashboard-village-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 30px rgba(15, 23, 42, .08);
+    }
+
+    .dashboard-village-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem;
+    }
+
+    .dashboard-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        border-radius: 999px;
+        padding: .18rem .48rem;
+        font-size: .72rem;
+        line-height: 1.15;
+        background: rgba(15, 23, 42, .06);
+        color: #445064;
+    }
+
+    .dashboard-pill.tone-green {
+        background: rgba(46, 184, 92, .12);
+        color: #207a3f;
+    }
+
+    .dashboard-pill.tone-orange {
+        background: rgba(247, 103, 7, .13);
+        color: #a44f05;
+    }
+
+    .dashboard-pill.tone-red {
+        background: rgba(214, 57, 57, .12);
+        color: #9d2626;
+    }
+
+    .dashboard-pill.tone-blue {
+        background: rgba(32, 107, 196, .1);
+        color: #1f5fae;
+    }
+
+    .dashboard-pill.tone-purple {
+        background: rgba(112, 72, 232, .12);
+        color: #5a31be;
+    }
+
+    .dashboard-mini-bars {
+        display: flex;
+        align-items: end;
+        gap: .45rem;
+        min-height: 10rem;
+        padding: .35rem 0 0;
+    }
+
+    .dashboard-mini-bar-item {
+        flex: 1 1 0;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .dashboard-mini-bar-track {
+        position: relative;
+        height: 8.4rem;
+        display: flex;
+        align-items: end;
+        justify-content: center;
+    }
+
+    .dashboard-mini-bar {
+        width: 100%;
+        max-width: 24px;
+        border-radius: 999px 999px 8px 8px;
+        background: linear-gradient(180deg, rgba(32,107,196,.92), rgba(32,107,196,.55));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+    }
+
+    .dashboard-mini-bar--success {
+        background: linear-gradient(180deg, rgba(46,184,92,.92), rgba(46,184,92,.55));
+    }
+
+    .dashboard-mini-label {
+        font-size: .72rem;
+        color: #667382;
+        margin-top: .35rem;
+    }
+
+    .dashboard-mini-value {
+        font-size: .72rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-top: .2rem;
+    }
+
+    .dashboard-horizontal-chart {
+        display: flex;
+        flex-direction: column;
+        gap: .55rem;
+    }
+
+    .dashboard-horizontal-row {
+        display: grid;
+        grid-template-columns: 56px 1fr 30px;
+        align-items: center;
+        gap: .6rem;
+    }
+
+    .dashboard-horizontal-track {
+        height: .72rem;
+        background: rgba(15, 23, 42, .08);
+        border-radius: 999px;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .04);
+    }
+
+    .dashboard-horizontal-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, rgba(112,72,232,.88), rgba(32,107,196,.74));
+    }
+
+    .dashboard-donut {
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        padding: 14px;
+        margin: 0 auto;
+    }
+
+    .dashboard-donut-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(255,255,255,.98);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .06);
+    }
+
+    .dashboard-search-col.is-filtered-out {
+        display: none;
+    }
+
+    .dashboard-empty-state {
+        padding: 3.5rem 1.5rem;
+        text-align: center;
+    }
+
+    .dashboard-empty-state .avatar {
+        width: 4rem;
+        height: 4rem;
+        margin: 0 auto .85rem;
+        font-size: 1.4rem;
+    }
+
+    .dashboard-village-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: .75rem;
+    }
+
+    .dashboard-village-name {
+        font-size: 1rem;
+        line-height: 1.2;
+        font-weight: 700;
+        margin-bottom: .1rem;
+    }
+
+    .dashboard-village-subtitle {
+        color: #667382;
+        font-size: .78rem;
+    }
+
+    .dashboard-village-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .55rem;
+    }
+
+    .dashboard-village-metric {
+        border-radius: 12px;
+        padding: .55rem .6rem;
+        background: rgba(248, 250, 252, .92);
+        border: 1px solid rgba(98, 105, 118, .09);
+    }
+
+    .dashboard-village-metric-label {
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #667382;
+        font-weight: 700;
+        margin-bottom: .12rem;
+    }
+
+    .dashboard-village-metric-value {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+</style>
+
+@if (!Model.IsAuthenticated)
+{
+    <div class="card dashboard-hero mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div>
+                    <div class="dashboard-section-title text-white opacity-75 mb-2">Clash Village Pulse</div>
+                    <h1 class="mb-2 text-white">A cleaner dashboard for village progress, priorities, and daily decisions.</h1>
+                    <div class="hero-subtitle">
+                        Track upgrade readiness, timer pressure, suggestions, and village freshness without jumping between multiple pages.
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a class="btn btn-light" asp-area="Identity" asp-page="/Account/Login">Login</a>
+                    <a class="btn btn-hero-light" asp-area="Identity" asp-page="/Account/Register">Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cards">
+        <div class="col-md-4">
+            <div class="card dashboard-stat-card">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Priorities</div>
+                    <div class="dashboard-stat-value">Queues that stay visible</div>
+                    <div class="text-secondary mt-2">Surface village priorities, pending suggestions, and action items in one place.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card dashboard-stat-card">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Freshness</div>
+                    <div class="dashboard-stat-value">Know what data is stale</div>
+                    <div class="text-secondary mt-2">Highlight uploads and export snapshots that need attention before you make decisions.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card dashboard-stat-card">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Focus</div>
+                    <div class="dashboard-stat-value">Work village-by-village</div>
+                    <div class="text-secondary mt-2">Jump quickly into Details and Priority with a more useful dashboard landing page.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (!Model.Villages.Any())
+{
+    <div class="card dashboard-hero mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div>
+                    <div class="dashboard-section-title text-white opacity-75 mb-2">Dashboard</div>
+                    <h1 class="mb-2 text-white">No villages yet. Let’s create your first data-rich dashboard.</h1>
+                    <div class="hero-subtitle">
+                        Upload one village export and this page will turn into a live dashboard with village urgency, freshness, recommendations, and charts.
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-light">Upload village</a>
+                    <a asp-controller="Village" asp-action="Index" class="btn btn-hero-light">My villages</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card dashboard-focus-card">
+        <div class="dashboard-empty-state">
+            <span class="avatar avatar-lg bg-blue-lt text-blue">🏡</span>
+            <h3 class="mb-2">Your dashboard is ready</h3>
+            <p class="text-secondary mb-4">
+                As soon as you upload village data, the home page will show recommendations, freshness indicators, and quick navigation to Details and Priority.
+            </p>
+            <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-primary">Upload your first village</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card dashboard-hero mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div>
+                    <div class="dashboard-section-title text-white opacity-75 mb-2">Home Dashboard</div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h1 class="mb-0 text-white">Command center for your villages</h1>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.FocusVillageName) && Model.FocusVillageId.HasValue)
+                        {
+                            <a asp-controller="Village"
+                               asp-action="Details"
+                               asp-route-id="@Model.FocusVillageId.Value"
+                               class="badge bg-white text-dark text-decoration-none">
+                                Focus: @Model.FocusVillageName
+                            </a>
+                        }
+                    </div>
+
+                    <div class="hero-subtitle">
+                        Use this as your daily entry point: see what needs action, which villages are stale, and where to jump next.
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-3 hero-meta">
+                        @if (!string.IsNullOrWhiteSpace(Model.LatestUploadVillageName) && Model.LatestUploadAtUtc.HasValue)
+                        {
+                            <span class="badge bg-white text-dark">
+                                Latest upload: @Model.LatestUploadVillageName · @Model.LatestUploadAtUtc.Value.ToString("dd MMM HH:mm") UTC
+                            </span>
+                        }
+
+                        <span class="badge  bg-white text-orange">Suggestions @Model.PendingSuggestions</span>
+                        <span class="badge  bg-white text-azure">Upgrades @Model.ActiveUpgrades</span>
+                        <span class="badge  bg-white text-red">Stale @Model.StaleVillages</span>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <a asp-controller="VillageUpload" asp-action="Index" class="btn btn-light">
+                        Upload Export
+                    </a>
+                    <a asp-controller="Village" asp-action="Index" class="btn btn-hero-light">
+                        My Villages
+                    </a>
+                    <a asp-controller="Village" asp-action="Clan" class="btn btn-hero-light">
+                        Clan View
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cards mb-4">
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card dashboard-stat-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Villages</div>
+                    <div class="dashboard-stat-value">@Model.TotalVillages</div>
+                    <div class="text-secondary mt-2">Owned villages</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card dashboard-stat-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Clan Linked</div>
+                    <div class="dashboard-stat-value">@Model.ClanLinkedVillages</div>
+                    <div class="text-secondary mt-2">Ready for collaboration</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card dashboard-stat-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Upgrading</div>
+                    <div class="dashboard-stat-value">@Model.ActiveUpgrades</div>
+                    <div class="text-secondary mt-2">Live timers found</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card dashboard-stat-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Helpers Busy</div>
+                    <div class="dashboard-stat-value">@Model.BusyHelpers</div>
+                    <div class="text-secondary mt-2">Helper rows active</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card dashboard-stat-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">Suggestions</div>
+                    <div class="dashboard-stat-value">@Model.PendingSuggestions</div>
+                    <div class="text-secondary mt-2">Pending review</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="card dashboard-stat-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-2">No Priority</div>
+                    <div class="dashboard-stat-value">@Model.VillagesWithoutPriority</div>
+                    <div class="text-secondary mt-2">Need queue setup</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cards mb-4">
+        <div class="col-xl-8">
+            <div class="card dashboard-chart-card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <div>
+                            <div class="dashboard-section-title mb-1">Village freshness</div>
+                            <h3 class="mb-1">What needs your attention first</h3>
+                            <div class="text-secondary">A quick read on data freshness across all villages.</div>
+                        </div>
+
+                        <div class="text-end">
+                            <div class="dashboard-section-title mb-1">System recommendations</div>
+                            <div class="text-secondary small">@Model.Recommendations.Count actionable recommendation(s)</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <div class="dashboard-donut" style="@donutStyle">
+                                <div class="dashboard-donut-inner">
+                                    <div class="dashboard-section-title mb-1">Freshness</div>
+                                    <div class="fw-bold fs-2">@Model.TotalVillages</div>
+                                    <div class="text-secondary small">total villages</div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                                <span class="dashboard-pill tone-green">Fresh @freshVillages</span>
+                                <span class="dashboard-pill tone-orange">Aging @agingVillages</span>
+                                <span class="dashboard-pill tone-red">Stale @staleVillages</span>
+                            </div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <div class="row g-3">
+                                @foreach (var rec in Model.Recommendations.Take(3))
+                                {
+                                    <div class="col-12">
+                                        <div class="card dashboard-recommendation-card tone-@rec.Tone">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                                    <div>
+                                                        <div class="fw-semibold mb-1">@rec.Title</div>
+                                                        <div class="text-secondary small">@rec.Message</div>
+                                                    </div>
+
+                                                    @if (!string.IsNullOrWhiteSpace(rec.ActionText) && !string.IsNullOrWhiteSpace(rec.ActionUrl))
+                                                    {
+                                                        <a href="@rec.ActionUrl" class="btn btn-sm btn-outline-secondary">
+                                                            @rec.ActionText
+                                                        </a>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (!Model.Recommendations.Any())
+                                {
+                                    <div class="col-12">
+                                        <div class="dashboard-pill tone-green">Everything looks calm right now.</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card dashboard-focus-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-1">Upload trend</div>
+                    <h3 class="mb-1">Villages updated by day</h3>
+                    <div class="text-secondary mb-3">Based on each village’s latest upload timestamp in the last 14 days.</div>
+
+                    <div class="dashboard-mini-bars">
+                        @foreach (var point in Model.UploadTrend)
+                        {
+                            var height = totalChartMax == 0 ? 8 : Math.Max(8, (int)Math.Round((point.Value / (double)totalChartMax) * 100d));
+
+                            <div class="dashboard-mini-bar-item" title="@($"{point.Label}: {point.Value}")">
+                                <div class="dashboard-mini-bar-track">
+                                    <div class="dashboard-mini-bar @(point.Value > 0 ? "dashboard-mini-bar--success" : "")"
+                                         style="height:@($"{height}%"); opacity:@(point.Value > 0 ? "1" : ".18")"></div>
+                                </div>
+                                <div class="dashboard-mini-value">@point.Value</div>
+                                <div class="dashboard-mini-label">@point.ShortLabel</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cards mb-4">
+        <div class="col-xl-4">
+            <div class="card dashboard-chart-card h-100">
+                <div class="card-body">
+                    <div class="dashboard-section-title mb-1">Town Hall spread</div>
+                    <h3 class="mb-1">Where your villages sit</h3>
+                    <div class="text-secondary mb-3">Useful for understanding how mixed your account portfolio is.</div>
+
+                    <div class="dashboard-horizontal-chart">
+                        @if (Model.TownHallDistribution.Any())
+                        {
+                            @foreach (var point in Model.TownHallDistribution)
+                            {
+                                var width = hallChartMax == 0 ? 0 : Math.Max(10, (int)Math.Round((point.Value / (double)hallChartMax) * 100d));
+
+                                <div class="dashboard-horizontal-row">
+                                    <div class="fw-semibold">@point.Label</div>
+                                    <div class="dashboard-horizontal-track">
+                                        <div class="dashboard-horizontal-fill" style="width:@($"{width}%")"></div>
+                                    </div>
+                                    <div class="text-secondary small text-end">@point.Value</div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-secondary">No Town Hall data available yet.</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8">
+            <div class="card dashboard-chart-card h-100">
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+                        <div>
+                            <div class="dashboard-section-title mb-1">My villages</div>
+                            <h3 class="mb-1">Daily operating board</h3>
+                            <div class="text-secondary">Cards are ranked by urgency score so the most important villages stay near the top.</div>
+                        </div>
+
+                        <div class="dashboard-toolbar">
+                            <input type="text"
+                                   id="dashboard-search"
+                                   class="form-control"
+                                   placeholder="Search by village, tag, clan, or hall..." />
+                        </div>
+                    </div>
+
+                    <div class="row row-cards" id="dashboard-village-grid">
+                        @foreach (var village in Model.Villages)
+                        {
+                            var searchText = string.Join(' ', new[]
+                            {
+                                village.Name,
+                                village.PlayerTag,
+                                village.ClanName,
+                                village.ClanTag,
+                                village.TownHallLevel.HasValue ? $"TH {village.TownHallLevel.Value}" : null,
+                                village.BuilderHallLevel.HasValue ? $"BH {village.BuilderHallLevel.Value}" : null,
+                                village.FreshnessLabel
+                            }.Where(x => !string.IsNullOrWhiteSpace(x))).ToLowerInvariant();
+
+                            <div class="col-md-4 dashboard-search-col"
+                                 data-search-text="@searchText">
+                                <div class="card dashboard-village-card h-100">
+                                    <div class="card-body">
+                                        <div class="dashboard-village-top mb-3">
+                                            <div>
+                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                    <span class="avatar avatar-sm bg-blue-lt text-blue">@heroInitial(village.Name)</span>
+                                                    <div>
+                                                        <div class="dashboard-village-name">@village.Name</div>
+                                                        <div class="dashboard-village-subtitle">@village.PlayerTag</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <span class="dashboard-pill tone-@village.FreshnessTone">@village.FreshnessLabel</span>
+                                        </div>
+
+                                        <div class="dashboard-village-meta mb-3">
+                                            @if (village.TownHallLevel.HasValue)
+                                            {
+                                                <span class="dashboard-pill">TH @village.TownHallLevel.Value</span>
+                                            }
+                                            @if (village.BuilderHallLevel.HasValue)
+                                            {
+                                                <span class="dashboard-pill">BH @village.BuilderHallLevel.Value</span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(village.ClanName) || !string.IsNullOrWhiteSpace(village.ClanTag))
+                                            {
+                                                <span class="dashboard-pill tone-blue">@(!string.IsNullOrWhiteSpace(village.ClanName) ? village.ClanName : village.ClanTag)</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="dashboard-pill">No clan</span>
+                                            }
+                                        </div>
+
+                                        <div class="dashboard-village-grid mb-3">
+                                            <div class="dashboard-village-metric">
+                                                <div class="dashboard-village-metric-label">Upgrades</div>
+                                                <div class="dashboard-village-metric-value">@village.ActiveUpgradeCount</div>
+                                            </div>
+
+                                            <div class="dashboard-village-metric">
+                                                <div class="dashboard-village-metric-label">Helpers</div>
+                                                <div class="dashboard-village-metric-value">@village.BusyHelperCount</div>
+                                            </div>
+
+                                            <div class="dashboard-village-metric">
+                                                <div class="dashboard-village-metric-label">Priority</div>
+                                                <div class="dashboard-village-metric-value">@village.PriorityItemCount</div>
+                                            </div>
+
+                                            <div class="dashboard-village-metric">
+                                                <div class="dashboard-village-metric-label">Suggestions</div>
+                                                <div class="dashboard-village-metric-value">@village.PendingSuggestionCount</div>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                                            <div class="text-secondary small">
+                                                Updated @freshnessText(village.ExportedAtUtc, village.LastUploadedAtUtc)
+                                            </div>
+
+                                            <span class="dashboard-pill tone-purple">Urgency @village.UrgencyScore</span>
+                                        </div>
+
+                                        <div class="d-flex gap-2">
+                                            <a asp-controller="Village"
+                                               asp-action="Details"
+                                               asp-route-id="@village.Id"
+                                               class="btn btn-sm btn-outline-primary flex-fill">
+                                                Details
+                                            </a>
+
+                                            <a asp-controller="VillagePriority"
+                                               asp-action="Edit"
+                                               asp-route-villageId="@village.Id"
+                                               class="btn btn-sm btn-outline-outline-secondary">
+                                                Priority
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div id="dashboard-search-empty" class="text-secondary small mt-3 d-none">
+                        No village cards match your search.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const input = document.getElementById('dashboard-search');
+            const cards = Array.from(document.querySelectorAll('.dashboard-search-col'));
+            const emptyState = document.getElementById('dashboard-search-empty');
+
+            if (!input || cards.length === 0) {
+                return;
+            }
+
+            function applyFilter() {
+                const term = (input.value || '').trim().toLowerCase();
+                let visible = 0;
+
+                cards.forEach(card => {
+                    const text = card.dataset.searchText || '';
+                    const matches = term.length === 0 || text.includes(term);
+                    card.classList.toggle('is-filtered-out', !matches);
+                    if (matches) {
+                        visible += 1;
+                    }
+                });
+
+                if (emptyState) {
+                    emptyState.classList.toggle('d-none', visible !== 0);
+                }
+            }
+
+            input.addEventListener('input', applyFilter);
+        })();
+    </script>
+}

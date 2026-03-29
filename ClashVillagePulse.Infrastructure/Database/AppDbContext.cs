@@ -20,7 +20,6 @@ public class AppDbContext : IdentityDbContext
     public DbSet<VillagePriorityItem> VillagePriorityItems => Set<VillagePriorityItem>();
     public DbSet<PrioritySuggestion> PrioritySuggestions => Set<PrioritySuggestion>();
 
-
     public DbSet<StaticDataRun> StaticDataRuns => Set<StaticDataRun>();
     public DbSet<StaticDataRunStep> StaticDataRunSteps => Set<StaticDataRunStep>();
 
@@ -30,6 +29,8 @@ public class AppDbContext : IdentityDbContext
     public DbSet<StaticItemRequirement> StaticItemRequirements => Set<StaticItemRequirement>();
     public DbSet<LocalizationText> LocalizationTexts => Set<LocalizationText>();
     public DbSet<StaticHallItemCap> StaticHallItemCaps => Set<StaticHallItemCap>();
+    public DbSet<StaticImageAsset> StaticImageAssets => Set<StaticImageAsset>();
+    public DbSet<StaticItemImage> StaticItemImages => Set<StaticItemImage>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -51,6 +52,8 @@ public class AppDbContext : IdentityDbContext
         ConfigureStaticItemRequirement(builder);
         ConfigureStaticHallItemCap(builder);
         ConfigureLocalizationText(builder);
+        ConfigureStaticImageAsset(builder);
+        ConfigureStaticItemImage(builder);
     }
 
     private static void ConfigureClan(ModelBuilder builder)
@@ -81,7 +84,7 @@ public class AppDbContext : IdentityDbContext
             .HasForeignKey(x => x.ClanId);
     }
 
-        private static void ConfigureClanMember(ModelBuilder builder)
+    private static void ConfigureClanMember(ModelBuilder builder)
     {
         var e = builder.Entity<ClanMember>();
 
@@ -97,7 +100,7 @@ public class AppDbContext : IdentityDbContext
             .IsUnique();
     }
 
-        private static void ConfigureVillage(ModelBuilder builder)
+    private static void ConfigureVillage(ModelBuilder builder)
     {
         var e = builder.Entity<Village>();
 
@@ -156,6 +159,7 @@ public class AppDbContext : IdentityDbContext
             x.Level
         });
     }
+
     private static void ConfigureClanPriority(ModelBuilder builder)
     {
         var e = builder.Entity<ClanPriorityItem>();
@@ -181,7 +185,7 @@ public class AppDbContext : IdentityDbContext
         }).IsUnique();
     }
 
-        private static void ConfigureVillagePriority(ModelBuilder builder)
+    private static void ConfigureVillagePriority(ModelBuilder builder)
     {
         var e = builder.Entity<VillagePriorityItem>();
 
@@ -203,7 +207,6 @@ public class AppDbContext : IdentityDbContext
             x.ItemDataId
         }).IsUnique();
     }
-
 
     private static void ConfigureSuggestion(ModelBuilder builder)
     {
@@ -256,6 +259,7 @@ public class AppDbContext : IdentityDbContext
             .HasForeignKey(x => x.StaticDataRunId)
             .OnDelete(DeleteBehavior.Cascade);
     }
+
     private static void ConfigureStaticDataRunStep(ModelBuilder builder)
     {
         var e = builder.Entity<StaticDataRunStep>();
@@ -282,6 +286,7 @@ public class AppDbContext : IdentityDbContext
 
         e.HasIndex(x => x.Status);
     }
+
     private static void ConfigureStaticItem(ModelBuilder builder)
     {
         var e = builder.Entity<StaticItem>();
@@ -307,6 +312,11 @@ public class AppDbContext : IdentityDbContext
             .WithOne(x => x.StaticItem)
             .HasForeignKey(x => x.StaticItemId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        e.HasMany(x => x.Images)
+            .WithOne(x => x.StaticItem)
+            .HasForeignKey(x => x.StaticItemId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigureStaticItemLevel(ModelBuilder builder)
@@ -329,6 +339,7 @@ public class AppDbContext : IdentityDbContext
             .WithOne(x => x.StaticItemLevel)
             .HasForeignKey(x => x.StaticItemLevelId)
             .OnDelete(DeleteBehavior.Cascade);
+
     }
 
     private static void ConfigureStaticItemLevelUpgradeCost(ModelBuilder builder)
@@ -411,5 +422,76 @@ public class AppDbContext : IdentityDbContext
             x.ItemType,
             x.ItemDataId
         }).IsUnique();
+    }
+
+    private static void ConfigureStaticImageAsset(ModelBuilder builder)
+    {
+        var e = builder.Entity<StaticImageAsset>();
+
+        e.ToTable("static_image_assets");
+
+        e.HasKey(x => x.Id);
+
+        e.Property(x => x.SourceType)
+            .HasConversion<int>();
+
+        e.Property(x => x.SourceUrl)
+            .HasMaxLength(2000)
+            .IsRequired();
+
+        e.Property(x => x.SourcePageUrl)
+            .HasMaxLength(2000);
+
+        e.Property(x => x.LocalPath)
+            .HasMaxLength(1000)
+            .IsRequired();
+
+        e.Property(x => x.FileName)
+            .HasMaxLength(255)
+            .IsRequired();
+
+        e.Property(x => x.ContentHash)
+            .HasMaxLength(128)
+            .IsRequired();
+
+        e.Property(x => x.MimeType)
+            .HasMaxLength(100);
+
+        e.Property(x => x.MatchReason)
+            .HasMaxLength(2000);
+
+        e.HasIndex(x => new { x.SourceType, x.SourceUrl })
+            .IsUnique();
+
+        e.HasIndex(x => x.LocalPath)
+            .IsUnique();
+    }
+
+    private static void ConfigureStaticItemImage(ModelBuilder builder)
+    {
+        var e = builder.Entity<StaticItemImage>();
+
+        e.ToTable("static_item_images");
+
+        e.HasKey(x => x.Id);
+
+        e.Property(x => x.AssetKind)
+            .HasMaxLength(50)
+            .IsRequired();
+
+        e.HasIndex(x => new
+        {
+            x.StaticItemId,
+            x.StaticItemLevelId,
+            x.StaticImageAssetId,
+            x.AssetKind
+        }).IsUnique();
+
+        e.HasIndex(x => new { x.StaticItemId, x.StaticItemLevelId, x.IsPreferred });
+
+        e.HasOne(x => x.StaticImageAsset)
+            .WithMany(x => x.ItemLinks)
+            .HasForeignKey(x => x.StaticImageAssetId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

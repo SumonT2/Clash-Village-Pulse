@@ -50,21 +50,21 @@ public class StaticDataGenerationService : IStaticDataGenerationService
         try
         {
             var targetKeys = request.Targets.Any()
-    ? request.Targets.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-    : new List<string>
-    {
-        "buildings",
-        "characters",
-        "heroes",
-        "spells",
-        "pets",
-        "equipment",
-        "texts",
-        "townhall-levels",
-        "traps",
-        "guardians",
-        "helpers"
-    };
+                ? request.Targets.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                : new List<string>
+                {
+                    "buildings",
+                    "characters",
+                    "heroes",
+                    "spells",
+                    "pets",
+                    "equipment",
+                    "texts",
+                    "townhall-levels",
+                    "traps",
+                    "guardians",
+                    "helpers"
+                };
 
             foreach (var targetKey in targetKeys)
             {

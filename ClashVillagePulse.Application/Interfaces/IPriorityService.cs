@@ -29,4 +29,17 @@ public interface IPriorityService
         Guid suggestionId,
         bool accept,
         CancellationToken cancellationToken = default);
+
+    Task<int> RespondToAllSuggestionsAsync(
+        string ownerUserId,
+        Guid villageId,
+        bool accept,
+        CancellationToken cancellationToken = default);
+
+    Task<PrioritySuggestionImportResultDto> SuggestVillagePriorityToVillageAsync(
+        string userId,
+        Guid sourceVillageId,
+        Guid targetVillageId,
+        string? message,
+        CancellationToken cancellationToken = default);
 }

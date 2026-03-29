@@ -1,37 +1,40 @@
-﻿/* Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
-for details on configuring this project to bundle and minify static web assets. */
+/* Global shell overrides for Tabler layout */
 
 a.navbar-brand {
-  white-space: normal;
-  text-align: center;
-  word-break: break-all;
+  white-space: nowrap;
+  text-align: left;
+  word-break: normal;
+  font-weight: 700;
+  letter-spacing: .01em;
 }
 
 a {
-  color: #0077cc;
+  color: #206bc4;
 }
 
 .btn-primary {
   color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
+  background-color: #206bc4;
+  border-color: #1d5fae;
 }
 
-.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
   color: #fff;
-  background-color: #1b6ec2;
-  border-color: #1861ac;
+  background-color: #206bc4;
+  border-color: #1d5fae;
 }
 
 .border-top {
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid rgba(98, 105, 118, .16);
 }
+
 .border-bottom {
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid rgba(98, 105, 118, .16);
 }
 
 .box-shadow {
-  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+  box-shadow: 0 .25rem .75rem rgba(15, 23, 42, .05);
 }
 
 button.accept-policy {
@@ -39,9 +42,22 @@ button.accept-policy {
   line-height: inherit;
 }
 
+.app-shell-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 1200px) {
+  .app-shell-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
 .footer {
-    position: static;
-    width: 100%;
-    white-space: normal;
-    line-height: 1.5;
+  position: static;
+  width: 100%;
+  white-space: normal;
+  line-height: 1.5;
+  padding-bottom: 1rem;
 }

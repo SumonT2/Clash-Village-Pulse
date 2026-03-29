@@ -1,4 +1,4 @@
-﻿@model ClashVillagePulse.Application.DTOs.VillagePriorityEditDto
+@model ClashVillagePulse.Application.DTOs.VillagePriorityEditDto
 
 @{
     ViewData["Title"] = "Village Priority";
@@ -69,6 +69,7 @@
     var villageInitial = string.IsNullOrWhiteSpace(Model.VillageName)
         ? "V"
         : Model.VillageName.Substring(0, 1).ToUpperInvariant();
+    var suggestionTargetCount = Model.SuggestionTargets.Count;
 }
 
 <style>
@@ -82,9 +83,9 @@
         background: linear-gradient(135deg, rgba(32, 107, 196, .96) 0%, rgba(112, 72, 232, .94) 100%);
     }
 
-        .priority-hero .badge.bg-white {
-            background: rgba(255, 255, 255, .92) !important;
-        }
+    .priority-hero .badge.bg-white {
+        background: rgba(255, 255, 255, .92) !important;
+    }
 
     .priority-hero-actions {
         display: flex;
@@ -94,17 +95,17 @@
         justify-content: flex-end;
     }
 
-        .priority-hero-actions .btn {
-            --tblr-btn-padding-y: .35rem;
-            --tblr-btn-padding-x: .65rem;
-            --tblr-btn-font-size: .78rem;
-        }
+    .priority-hero-actions .btn {
+        --tblr-btn-padding-y: .35rem;
+        --tblr-btn-padding-x: .65rem;
+        --tblr-btn-font-size: .78rem;
+    }
 
-        .priority-hero-actions .btn-icon {
-            width: 2rem;
-            height: 2rem;
-            padding: 0;
-        }
+    .priority-hero-actions .btn-icon {
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+    }
 
     .priority-hero-avatar {
         width: 3.1rem;
@@ -129,10 +130,10 @@
         margin-top: .85rem;
     }
 
-        .priority-hero-badges .badge {
-            font-size: .72rem;
-            box-shadow: 0 .125rem .25rem rgba(15, 23, 42, .12);
-        }
+    .priority-hero-badges .badge {
+        font-size: .72rem;
+        box-shadow: 0 .125rem .25rem rgba(15, 23, 42, .12);
+    }
 
     .priority-metric-card .card-body {
         padding: .9rem 1rem;
@@ -150,10 +151,10 @@
         backdrop-filter: blur(6px);
     }
 
-        .priority-page-toolbar .card-body {
-            background: rgba(255, 255, 255, .92);
-            padding: .85rem 1rem;
-        }
+    .priority-page-toolbar .card-body {
+        background: rgba(255, 255, 255, .92);
+        padding: .85rem 1rem;
+    }
 
     .priority-queue-card {
         border: 1px dashed rgba(98, 105, 118, .28);
@@ -169,32 +170,32 @@
         transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
     }
 
-        .priority-item-card::before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto 0;
-            height: 4px;
-            background: #E6E6FA;
-        }
+    .priority-item-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: rgba(32, 107, 196, .82);
+    }
 
-        .priority-item-card .card-body,
-        .priority-queue-card .card-body {
-            padding: .85rem .9rem;
-        }
+    .priority-item-card .card-body,
+    .priority-queue-card .card-body {
+        padding: .85rem .9rem;
+    }
 
-        .priority-item-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .07);
-        }
+    .priority-item-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .07);
+    }
 
-        .priority-item-card.is-prioritized {
-            border-color: rgba(32, 107, 196, .32);
-            box-shadow: 0 0 0 1px rgba(32, 107, 196, .08);
-        }
+    .priority-item-card.is-prioritized {
+        border-color: rgba(32, 107, 196, .32);
+        box-shadow: 0 0 0 1px rgba(32, 107, 196, .08);
+    }
 
-            .priority-item-card.is-prioritized::before {
-                background: rgba(250, 173, 20, .92);
-            }
+    .priority-item-card.is-prioritized::before {
+        background: rgba(250, 173, 20, .92);
+    }
 
     .priority-rank-pill {
         min-width: 2rem;
@@ -215,9 +216,22 @@
         display: none;
     }
 
-        .priority-search-empty.is-visible {
-            display: block;
-        }
+    .priority-search-empty.is-visible {
+        display: block;
+    }
+
+    .priority-suggest-card {
+        border: 1px solid rgba(98, 105, 118, .16);
+        background: rgba(255, 255, 255, .96);
+    }
+
+    .priority-suggest-card .card-body {
+        padding: .95rem 1rem;
+    }
+
+    .priority-suggest-note {
+        font-size: .78rem;
+    }
 
     .priority-toolbar {
         display: flex;
@@ -304,6 +318,7 @@
 <form asp-action="Save" method="post" id="village-priority-form">
     @Html.AntiForgeryToken()
     <input type="hidden" name="villageId" value="@Model.VillageId" />
+    <input type="hidden" name="sourceVillageId" value="@Model.VillageId" />
 
     <div class="card mb-4 overflow-hidden priority-hero-card">
         <div class="card-body p-0">
@@ -325,7 +340,7 @@
                             <span aria-hidden="true">←</span>
                         </a>
 
-                        <button type="submit" class="btn btn-light text-primary fw-semibold">
+                        <button type="submit" class="btn btn-light text-primary fw-semibold" formnovalidate>
                             Save Priority
                         </button>
                     </div>
@@ -381,6 +396,52 @@
             </div>
         </div>
     </div>
+
+@if (suggestionTargetCount > 0)
+{
+    <div class="card mb-4 priority-suggest-card">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-xl-4">
+                    <div class="text-secondary text-uppercase fw-bold fs-5 mb-1">Suggest to another village</div>
+                    <div class="text-secondary priority-suggest-note">
+                        Copy your current queue into pending suggestions for another village. Your own other villages and same-clan villages are supported. Only matching items are added, and items already prioritized or already pending in the target village are skipped.
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <label class="form-label mb-1" for="targetVillageId">Target village</label>
+                    <select class="form-select" id="targetVillageId" name="targetVillageId" required>
+                        <option value="">Select another village...</option>
+                        @foreach (var target in Model.SuggestionTargets)
+                        {
+                            <option value="@target.Id">@target.Name (@target.PlayerTag)@(string.IsNullOrWhiteSpace(target.OwnerDisplayName) ? "" : $" - {target.OwnerDisplayName}")</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-6 col-xl-3">
+                    <label class="form-label mb-1" for="suggestion-message">Message (optional)</label>
+                    <input type="text"
+                           class="form-control"
+                           id="suggestion-message"
+                           name="message"
+                           maxlength="250"
+                           placeholder="Optional note for the target owner" />
+                </div>
+
+                <div class="col-12 col-xl-2">
+                    <button type="submit"
+                            class="btn btn-outline-primary w-100"
+                            formaction="@Url.Action("SuggestToVillage", "VillagePriority")"
+                            formmethod="post">
+                        Suggest Queue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
     <div class="card mb-4 priority-page-toolbar shadow-sm">
         <div class="card-body">
@@ -446,9 +507,9 @@
 
             <div class="card-body">
                 @foreach (var typeGroup in sectionGroup
-                            .GroupBy(x => x.Item.ItemType)
-                            .OrderBy(x => itemTypeOrder(x.Key))
-                            .ThenBy(x => x.Key.ToString()))
+                    .GroupBy(x => x.Item.ItemType)
+                    .OrderBy(x => itemTypeOrder(x.Key))
+                    .ThenBy(x => x.Key.ToString()))
                 {
                     <div class="mb-4 priority-type-block" data-type-block>
                         <div class="d-flex align-items-center gap-2 mb-3">
@@ -464,16 +525,16 @@
                             {
                                 var searchText = string.Join(" ", new[]
                                 {
-                                        entry.Item.ItemName,
-                                        sectionLabel(entry.Item.Section),
-                                        itemTypeLabel(entry.Item.ItemType),
-                                        entry.Item.CurrentLevelText,
-                                        entry.Item.CurrentTotalCount.ToString(),
-                                        entry.Item.ClanPriorityRank?.ToString() ?? string.Empty,
-                                        entry.Item.EffectivePrioritySource ?? string.Empty
-                                        }).ToLowerInvariant();
+                                    entry.Item.ItemName,
+                                    sectionLabel(entry.Item.Section),
+                                    itemTypeLabel(entry.Item.ItemType),
+                                    entry.Item.CurrentLevelText,
+                                    entry.Item.CurrentTotalCount.ToString(),
+                                    entry.Item.ClanPriorityRank?.ToString() ?? string.Empty,
+                                    entry.Item.EffectivePrioritySource ?? string.Empty
+                                }).ToLowerInvariant();
 
-                                <div class="col-md-6 col-xl-4 priority-item-col"
+                                <div class="col-sm-6 col-lg-4 col-xl-3 priority-item-col"
                                      data-item-col
                                      data-search-text="@searchText">
                                     <div class="card priority-item-card @(entry.Item.VillagePriorityRank.HasValue ? "is-prioritized" : string.Empty)"

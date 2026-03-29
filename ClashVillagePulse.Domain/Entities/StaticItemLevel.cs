@@ -12,6 +12,12 @@ public class StaticItemLevel
 
     public int? UpgradeTimeSeconds { get; set; }
 
+    public string? HelperType { get; set; }
+
+    public int? BoostMultiplier { get; set; }
+
+    public int? BoostTimeSeconds { get; set; }
+
     public ICollection<StaticItemLevelUpgradeCost> UpgradeCosts { get; set; }
         = new List<StaticItemLevelUpgradeCost>();
 

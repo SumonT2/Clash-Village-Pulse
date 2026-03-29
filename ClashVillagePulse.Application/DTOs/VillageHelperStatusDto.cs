@@ -22,7 +22,14 @@ public sealed class VillageHelperStatusDto
     public DateTime? UpgradeFinishAtUtc { get; set; }
 
     public int? CooldownSecondsAtExport { get; set; }
+    public DateTime? NextResetAtUtc { get; set; }
     public DateTime? AvailableAtUtc { get; set; }
+
+    public int? BoostMultiplier { get; set; }
+    public int? BoostTimeSeconds { get; set; }
+    public int? SavedSecondsPerCycle { get; set; }
+    public int? EstimatedFutureSavedSeconds { get; set; }
+    public DateTime? EstimatedTargetFinishAtUtc { get; set; }
 
     public string? AssignmentLabel { get; set; }
     public ItemType? TargetItemType { get; set; }

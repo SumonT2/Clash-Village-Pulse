@@ -1,3 +1,26 @@
+:root {
+  --app-radius: .35rem;
+  --app-radius-sm: .25rem;
+  --tblr-border-radius: var(--app-radius);
+  --tblr-border-radius-sm: var(--app-radius-sm);
+  --tblr-border-radius-lg: .45rem;
+  --tblr-border-radius-pill: 999px;
+}
+
+.card,
+.btn,
+.form-control,
+.form-select,
+.input-group-text,
+.dropdown-menu,
+.alert,
+.modal-content,
+.list-group-item,
+.table thead th,
+.badge:not(.rounded-pill) {
+  border-radius: var(--app-radius);
+}
+
 html {
   font-size: 14px;
 }
@@ -17,7 +40,9 @@ html {
   min-height: 100%;
 }
 
-
+body {
+  margin-bottom: 0;
+}
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
   color: var(--bs-secondary-color);
@@ -26,4 +51,20 @@ html {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
+}
+
+.page-body > .app-shell-container {
+  width: 100%;
+}
+
+.page-header > .app-shell-container {
+  width: 100%;
+}
+
+main[role="main"] {
+  min-width: 0;
+}
+
+.row.row-cards > [class*="col-"] {
+  min-width: 0;
 }

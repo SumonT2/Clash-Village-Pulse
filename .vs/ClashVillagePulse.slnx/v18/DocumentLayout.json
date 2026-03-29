@@ -3,6 +3,42 @@
   "WorkspaceRootPath": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.infrastructure\\database\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|solutionrelative:clashvillagepulse.infrastructure\\database\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{640471C6-77C5-E480-B8B4-3FDED166462D}|ClashVillagePulse.Domain\\ClashVillagePulse.Domain.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.domain\\entities\\staticitemlevel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{640471C6-77C5-E480-B8B4-3FDED166462D}|ClashVillagePulse.Domain\\ClashVillagePulse.Domain.csproj|solutionrelative:clashvillagepulse.domain\\entities\\staticitemlevel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.infrastructure\\database\\migrations\\20260327053446_addfankitimagecrawler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|solutionrelative:clashvillagepulse.infrastructure\\database\\migrations\\20260327053446_addfankitimagecrawler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.infrastructure\\database\\migrations\\20260321172900_addprioritysuggestionrankandhallcaps.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|solutionrelative:clashvillagepulse.infrastructure\\database\\migrations\\20260321172900_addprioritysuggestionrankandhallcaps.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.infrastructure\\database\\migrations\\appdbcontextmodelsnapshot.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|solutionrelative:clashvillagepulse.infrastructure\\database\\migrations\\appdbcontextmodelsnapshot.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.infrastructure\\services\\villagequeryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|solutionrelative:clashvillagepulse.infrastructure\\services\\villagequeryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9DE47AA9-4102-D884-EB4C-E1BB54BB7C3D}|ClashVillagePulse.Web\\ClashVillagePulse.Web.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.web\\views\\home\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{9DE47AA9-4102-D884-EB4C-E1BB54BB7C3D}|ClashVillagePulse.Web\\ClashVillagePulse.Web.csproj|solutionrelative:clashvillagepulse.web\\views\\home\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.infrastructure\\staticdata\\fankitimagecrawler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|solutionrelative:clashvillagepulse.infrastructure\\staticdata\\fankitimagecrawler.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.infrastructure\\staticdata\\processors\\fankitimagesprocessor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{CA5C1C22-339E-3A79-04B5-F10C84B29345}|ClashVillagePulse.Infrastructure\\ClashVillagePulse.Infrastructure.csproj|solutionrelative:clashvillagepulse.infrastructure\\staticdata\\processors\\fankitimagesprocessor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{9DE47AA9-4102-D884-EB4C-E1BB54BB7C3D}|ClashVillagePulse.Web\\ClashVillagePulse.Web.csproj|c:\\users\\sumon\\documents\\clashvillagepulse\\clashvillagepulse.web\\views\\villagepriority\\edit.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
       "RelativeMoniker": "D:0:0:{9DE47AA9-4102-D884-EB4C-E1BB54BB7C3D}|ClashVillagePulse.Web\\ClashVillagePulse.Web.csproj|solutionrelative:clashvillagepulse.web\\views\\villagepriority\\edit.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
@@ -26,11 +62,128 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "20260321172900_AddPrioritySuggestionRankAndHallCaps.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260321172900_AddPrioritySuggestionRankAndHallCaps.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260321172900_AddPrioritySuggestionRankAndHallCaps.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260321172900_AddPrioritySuggestionRankAndHallCaps.cs",
+              "RelativeToolTip": "ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260321172900_AddPrioritySuggestionRankAndHallCaps.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-29T03:02:05.934Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "20260327053446_AddFankitImageCrawler.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260327053446_AddFankitImageCrawler.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260327053446_AddFankitImageCrawler.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260327053446_AddFankitImageCrawler.cs",
+              "RelativeToolTip": "ClashVillagePulse.Infrastructure\\Database\\Migrations\\20260327053446_AddFankitImageCrawler.cs",
+              "ViewState": "AgIAAGMAAAAABAAAAEAtwAgAAAA6AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-29T03:01:41.538Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "AppDbContextModelSnapshot.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\Migrations\\AppDbContextModelSnapshot.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Infrastructure\\Database\\Migrations\\AppDbContextModelSnapshot.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\Migrations\\AppDbContextModelSnapshot.cs",
+              "RelativeToolTip": "ClashVillagePulse.Infrastructure\\Database\\Migrations\\AppDbContextModelSnapshot.cs",
+              "ViewState": "AgIAAJoDAAAAAAAAAAArwKQDAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-29T03:01:11.507Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "StaticItemLevel.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Domain\\Entities\\StaticItemLevel.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Domain\\Entities\\StaticItemLevel.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Domain\\Entities\\StaticItemLevel.cs",
+              "RelativeToolTip": "ClashVillagePulse.Domain\\Entities\\StaticItemLevel.cs",
+              "ViewState": "AgIAABIAAACAZ2ZmZmYvwAIAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-29T02:58:23.283Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "AppDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\AppDbContext.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Infrastructure\\Database\\AppDbContext.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Database\\AppDbContext.cs",
+              "RelativeToolTip": "ClashVillagePulse.Infrastructure\\Database\\AppDbContext.cs",
+              "ViewState": "AgIAAEwBAAAAAAAAAAAiwF4BAAAcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-29T02:54:29.521Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "VillageQueryService.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Services\\VillageQueryService.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Infrastructure\\Services\\VillageQueryService.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\Services\\VillageQueryService.cs",
+              "RelativeToolTip": "ClashVillagePulse.Infrastructure\\Services\\VillageQueryService.cs",
+              "ViewState": "AgIAAKADAAAAAAAAAAAwwLYDAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-27T21:05:12.868Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Web\\Views\\Home\\Index.cshtml",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Web\\Views\\Home\\Index.cshtml",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Web\\Views\\Home\\Index.cshtml",
+              "RelativeToolTip": "ClashVillagePulse.Web\\Views\\Home\\Index.cshtml",
+              "ViewState": "AgIAAMcBAAAAAAAAAAAgwNQBAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-03-27T20:33:12.04Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "FankitImagesProcessor.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\StaticData\\Processors\\FankitImagesProcessor.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Infrastructure\\StaticData\\Processors\\FankitImagesProcessor.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\StaticData\\Processors\\FankitImagesProcessor.cs",
+              "RelativeToolTip": "ClashVillagePulse.Infrastructure\\StaticData\\Processors\\FankitImagesProcessor.cs",
+              "ViewState": "AgIAAIoEAAAAAAAAAAA/wKAEAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-27T07:01:46.611Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "FankitImageCrawler.cs",
+              "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\StaticData\\FankitImageCrawler.cs",
+              "RelativeDocumentMoniker": "ClashVillagePulse.Infrastructure\\StaticData\\FankitImageCrawler.cs",
+              "ToolTip": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Infrastructure\\StaticData\\FankitImageCrawler.cs",
+              "RelativeToolTip": "ClashVillagePulse.Infrastructure\\StaticData\\FankitImageCrawler.cs",
+              "ViewState": "AgIAAMEAAAAAmZmZmRkmwF4BAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-26T19:54:06.421Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
               "Title": "Edit.cshtml",
               "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Web\\Views\\VillagePriority\\Edit.cshtml",
               "RelativeDocumentMoniker": "ClashVillagePulse.Web\\Views\\VillagePriority\\Edit.cshtml",
@@ -38,12 +191,11 @@
               "RelativeToolTip": "ClashVillagePulse.Web\\Views\\VillagePriority\\Edit.cshtml",
               "ViewState": "AgIAAKMAAAAAfGZmZiYvwKwAAAAYAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-03-25T09:01:51.89Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-25T09:01:51.89Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 10,
               "Title": "Details.cshtml",
               "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Web\\Views\\Village\\Details.cshtml",
               "RelativeDocumentMoniker": "ClashVillagePulse.Web\\Views\\Village\\Details.cshtml",
@@ -51,12 +203,11 @@
               "RelativeToolTip": "ClashVillagePulse.Web\\Views\\Village\\Details.cshtml",
               "ViewState": "AgIAAOUAAAAAAB4zMzPbv/EAAAAYAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-03-25T07:28:55.494Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-25T07:28:55.494Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 11,
               "Title": "appsettings.Development.json",
               "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Web\\appsettings.Development.json",
               "RelativeDocumentMoniker": "ClashVillagePulse.Web\\appsettings.Development.json",
@@ -64,12 +215,11 @@
               "RelativeToolTip": "ClashVillagePulse.Web\\appsettings.Development.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-03-24T18:08:56.987Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-24T18:08:56.987Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 12,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\Sumon\\Documents\\ClashVillagePulse\\ClashVillagePulse.Web\\appsettings.json",
               "RelativeDocumentMoniker": "ClashVillagePulse.Web\\appsettings.json",
@@ -77,8 +227,7 @@
               "RelativeToolTip": "ClashVillagePulse.Web\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-03-24T18:08:53.53Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-24T18:08:53.53Z"
             }
           ]
         }

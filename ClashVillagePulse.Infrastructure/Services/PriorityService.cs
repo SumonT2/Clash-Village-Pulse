@@ -153,6 +153,9 @@ public sealed class PriorityService : IPriorityService
         SubmitPrioritySuggestionDto request,
         CancellationToken cancellationToken = default)
     {
+        if (request.SuggestedPriorityRank <= 0)
+            throw new InvalidOperationException("Suggested rank must be greater than zero.");
+
         var village = await _db.Villages
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Id == request.VillageId && !x.IsArchived, cancellationToken);
@@ -183,13 +186,6 @@ public sealed class PriorityService : IPriorityService
         if (!itemExists)
             throw new InvalidOperationException("Target item was not found in the village.");
 
-        var cleanedMessage = string.IsNullOrWhiteSpace(request.Message)
-            ? null
-            : request.Message.Trim();
-
-        if (string.IsNullOrWhiteSpace(cleanedMessage))
-            throw new InvalidOperationException("Please add a short message for the suggestion.");
-
         var existingPending = await _db.PrioritySuggestions
             .FirstOrDefaultAsync(x =>
                 x.VillageId == request.VillageId &&
@@ -199,12 +195,6 @@ public sealed class PriorityService : IPriorityService
                 x.ItemDataId == request.ItemDataId &&
                 x.Status == SuggestionStatus.Pending,
                 cancellationToken);
-
-        var suggestedRank = request.SuggestedPriorityRank > 0
-            ? request.SuggestedPriorityRank
-            : existingPending?.SuggestedPriorityRank > 0
-                ? existingPending.SuggestedPriorityRank
-                : await GetNextSuggestedRankAsync(request.VillageId, cancellationToken);
 
         if (existingPending is null)
         {
@@ -216,20 +206,151 @@ public sealed class PriorityService : IPriorityService
                 Section = request.Section,
                 ItemType = request.ItemType,
                 ItemDataId = request.ItemDataId,
-                SuggestedPriorityRank = suggestedRank,
-                Message = cleanedMessage,
+                SuggestedPriorityRank = request.SuggestedPriorityRank,
+                Message = request.Message,
                 Status = SuggestionStatus.Pending,
                 CreatedAtUtc = DateTime.UtcNow
             });
         }
         else
         {
-            existingPending.SuggestedPriorityRank = suggestedRank;
-            existingPending.Message = cleanedMessage;
+            existingPending.SuggestedPriorityRank = request.SuggestedPriorityRank;
+            existingPending.Message = request.Message;
             existingPending.CreatedAtUtc = DateTime.UtcNow;
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<PrioritySuggestionImportResultDto> SuggestVillagePriorityToVillageAsync(
+        string userId,
+        Guid sourceVillageId,
+        Guid targetVillageId,
+        string? message,
+        CancellationToken cancellationToken = default)
+    {
+        var sourceVillage = await _db.Villages
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == sourceVillageId && x.OwnerUserId == userId && !x.IsArchived, cancellationToken);
+
+        if (sourceVillage is null)
+            throw new InvalidOperationException("Source village not found or access denied.");
+
+        var targetVillage = await _db.Villages
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == targetVillageId && !x.IsArchived, cancellationToken);
+
+        if (targetVillage is null)
+            throw new InvalidOperationException("Target village not found.");
+
+        if (targetVillage.Id == sourceVillage.Id)
+            throw new InvalidOperationException("Choose a different target village.");
+
+        var isOwnOtherVillage = targetVillage.OwnerUserId == userId;
+        var isSameClanTarget = sourceVillage.ClanId.HasValue
+            && targetVillage.ClanId.HasValue
+            && targetVillage.ClanId.Value == sourceVillage.ClanId.Value;
+
+        if (!isOwnOtherVillage && !isSameClanTarget)
+            throw new InvalidOperationException("Target village must be one of your other villages or belong to the same clan as the source village.");
+
+        var sourcePriorities = await _db.VillagePriorityItems
+            .AsNoTracking()
+            .Where(x => x.VillageId == sourceVillageId)
+            .OrderBy(x => x.PriorityRank)
+            .ThenBy(x => x.ItemType)
+            .ThenBy(x => x.ItemDataId)
+            .ToListAsync(cancellationToken);
+
+        if (sourcePriorities.Count == 0)
+            throw new InvalidOperationException("The source village has no saved priority items yet.");
+
+        var targetItems = await _db.VillageItemLevels
+            .AsNoTracking()
+            .Where(x => x.VillageId == targetVillageId)
+            .Select(x => new { x.Section, x.ItemType, x.ItemDataId })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        var targetItemKeys = targetItems
+            .Select(x => new PriorityKey(x.Section, x.ItemType, x.ItemDataId))
+            .ToHashSet();
+
+        var existingPriorityKeys = await _db.VillagePriorityItems
+            .AsNoTracking()
+            .Where(x => x.VillageId == targetVillageId)
+            .Select(x => new { x.Section, x.ItemType, x.ItemDataId })
+            .ToListAsync(cancellationToken);
+
+        var existingPendingKeys = await _db.PrioritySuggestions
+            .AsNoTracking()
+            .Where(x => x.VillageId == targetVillageId && x.Status == SuggestionStatus.Pending)
+            .Select(x => new { x.Section, x.ItemType, x.ItemDataId })
+            .ToListAsync(cancellationToken);
+
+        var prioritizedKeySet = existingPriorityKeys
+            .Select(x => new PriorityKey(x.Section, x.ItemType, x.ItemDataId))
+            .ToHashSet();
+
+        var pendingKeySet = existingPendingKeys
+            .Select(x => new PriorityKey(x.Section, x.ItemType, x.ItemDataId))
+            .ToHashSet();
+
+        var result = new PrioritySuggestionImportResultDto
+        {
+            TargetVillageName = targetVillage.Name,
+            SourcePriorityCount = sourcePriorities.Count
+        };
+
+        var createdAtUtc = DateTime.UtcNow;
+        var customMessage = string.IsNullOrWhiteSpace(message) ? null : message.Trim();
+
+        foreach (var sourceItem in sourcePriorities)
+        {
+            var key = new PriorityKey(sourceItem.Section, sourceItem.ItemType, sourceItem.ItemDataId);
+
+            if (!targetItemKeys.Contains(key))
+            {
+                result.MissingInTargetCount++;
+                continue;
+            }
+
+            if (prioritizedKeySet.Contains(key))
+            {
+                result.AlreadyPrioritizedCount++;
+                continue;
+            }
+
+            if (pendingKeySet.Contains(key))
+            {
+                result.AlreadyPendingCount++;
+                continue;
+            }
+
+            _db.PrioritySuggestions.Add(new PrioritySuggestion
+            {
+                Id = Guid.NewGuid(),
+                VillageId = targetVillageId,
+                SuggestedByUserId = userId,
+                Section = sourceItem.Section,
+                ItemType = sourceItem.ItemType,
+                ItemDataId = sourceItem.ItemDataId,
+                SuggestedPriorityRank = sourceItem.PriorityRank,
+                Message = BuildTransferMessage(sourceVillage.Name, sourceItem.PriorityRank, customMessage),
+                Status = SuggestionStatus.Pending,
+                CreatedAtUtc = createdAtUtc
+            });
+
+            pendingKeySet.Add(key);
+            result.AddedCount++;
+        }
+
+        if (result.AddedCount > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+
+        return result;
     }
 
     public async Task RespondToSuggestionAsync(
@@ -257,55 +378,100 @@ public sealed class PriorityService : IPriorityService
 
         if (accept)
         {
-            var existing = await _db.VillagePriorityItems
-                .FirstOrDefaultAsync(x =>
-                    x.VillageId == suggestion.VillageId &&
-                    x.Section == suggestion.Section &&
-                    x.ItemType == suggestion.ItemType &&
-                    x.ItemDataId == suggestion.ItemDataId,
-                    cancellationToken);
-
-            if (existing is null)
-            {
-                _db.VillagePriorityItems.Add(new VillagePriorityItem
-                {
-                    Id = Guid.NewGuid(),
-                    VillageId = suggestion.VillageId,
-                    Section = suggestion.Section,
-                    ItemType = suggestion.ItemType,
-                    ItemDataId = suggestion.ItemDataId,
-                    PriorityRank = suggestion.SuggestedPriorityRank,
-                    Note = suggestion.Message,
-                    CreatedByUserId = ownerUserId,
-                    CreatedAtUtc = DateTime.UtcNow
-                });
-            }
-            else
-            {
-                existing.PriorityRank = suggestion.SuggestedPriorityRank;
-                existing.Note = suggestion.Message;
-                existing.UpdatedAtUtc = DateTime.UtcNow;
-            }
+            await ApplySuggestionToVillagePriorityAsync(ownerUserId, suggestion, cancellationToken);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<int> GetNextSuggestedRankAsync(
+    public async Task<int> RespondToAllSuggestionsAsync(
+        string ownerUserId,
         Guid villageId,
+        bool accept,
+        CancellationToken cancellationToken = default)
+    {
+        var village = await _db.Villages
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == villageId && !x.IsArchived, cancellationToken);
+
+        if (village is null)
+            throw new InvalidOperationException("Village not found.");
+
+        if (village.OwnerUserId != ownerUserId)
+            throw new InvalidOperationException("Only the village owner can respond to suggestions.");
+
+        var pendingSuggestions = await _db.PrioritySuggestions
+            .Where(x => x.VillageId == villageId && x.Status == SuggestionStatus.Pending)
+            .OrderBy(x => x.CreatedAtUtc)
+            .ThenBy(x => x.SuggestedPriorityRank)
+            .ToListAsync(cancellationToken);
+
+        if (pendingSuggestions.Count == 0)
+            return 0;
+
+        var decidedAtUtc = DateTime.UtcNow;
+
+        foreach (var suggestion in pendingSuggestions)
+        {
+            suggestion.Status = accept ? SuggestionStatus.Accepted : SuggestionStatus.Rejected;
+            suggestion.DecidedByUserId = ownerUserId;
+            suggestion.DecidedAtUtc = decidedAtUtc;
+        }
+
+        if (accept)
+        {
+            var winningSuggestions = pendingSuggestions
+                .GroupBy(x => new PriorityKey(x.Section, x.ItemType, x.ItemDataId))
+                .Select(g => g
+                    .OrderByDescending(x => x.CreatedAtUtc)
+                    .ThenByDescending(x => x.SuggestedPriorityRank)
+                    .First())
+                .ToList();
+
+            foreach (var suggestion in winningSuggestions)
+            {
+                await ApplySuggestionToVillagePriorityAsync(ownerUserId, suggestion, cancellationToken);
+            }
+        }
+
+        await _db.SaveChangesAsync(cancellationToken);
+        return pendingSuggestions.Count;
+    }
+
+    private async Task ApplySuggestionToVillagePriorityAsync(
+        string ownerUserId,
+        PrioritySuggestion suggestion,
         CancellationToken cancellationToken)
     {
-        var currentVillageMax = await _db.VillagePriorityItems
-            .Where(x => x.VillageId == villageId)
-            .Select(x => (int?)x.PriorityRank)
-            .MaxAsync(cancellationToken) ?? 0;
+        var existing = await _db.VillagePriorityItems
+            .FirstOrDefaultAsync(x =>
+                x.VillageId == suggestion.VillageId &&
+                x.Section == suggestion.Section &&
+                x.ItemType == suggestion.ItemType &&
+                x.ItemDataId == suggestion.ItemDataId,
+                cancellationToken);
 
-        var currentPendingMax = await _db.PrioritySuggestions
-            .Where(x => x.VillageId == villageId && x.Status == SuggestionStatus.Pending)
-            .Select(x => (int?)x.SuggestedPriorityRank)
-            .MaxAsync(cancellationToken) ?? 0;
-
-        return Math.Max(currentVillageMax, currentPendingMax) + 1;
+        if (existing is null)
+        {
+            _db.VillagePriorityItems.Add(new VillagePriorityItem
+            {
+                Id = Guid.NewGuid(),
+                VillageId = suggestion.VillageId,
+                Section = suggestion.Section,
+                ItemType = suggestion.ItemType,
+                ItemDataId = suggestion.ItemDataId,
+                PriorityRank = suggestion.SuggestedPriorityRank,
+                Note = suggestion.Message,
+                CreatedByUserId = ownerUserId,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            existing.PriorityRank = suggestion.SuggestedPriorityRank;
+            existing.Note = suggestion.Message;
+            existing.UpdatedAtUtc = DateTime.UtcNow;
+        }
     }
 
     private static List<SavePriorityItemDto> NormalizePriorityInputs(IReadOnlyList<SavePriorityItemDto> items)
@@ -325,4 +491,17 @@ public sealed class PriorityService : IPriorityService
             })
             .ToList();
     }
+
+    private static string BuildTransferMessage(string sourceVillageName, int sourceRank, string? customMessage)
+    {
+        var baseMessage = $"Suggested from {sourceVillageName} priority #{sourceRank}.";
+        return string.IsNullOrWhiteSpace(customMessage)
+            ? baseMessage
+            : $"{baseMessage} {customMessage}";
+    }
+
+    private readonly record struct PriorityKey(
+        VillageSection Section,
+        ItemType ItemType,
+        int ItemDataId);
 }

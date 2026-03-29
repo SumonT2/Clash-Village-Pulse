@@ -106,10 +106,12 @@
 
     Func<string, int> helperStatusOrder = status => status switch
     {
-        "Assigned" => 1,
-        "Leveling" => 2,
-        "Cooldown" => 3,
-        "Idle" => 4,
+        "Helping recurrent" => 1,
+        "Assigned" => 2,
+        "Leveling" => 3,
+        "Cooldown" => 4,
+        "Available" => 5,
+        "Idle" => 6,
         _ => 99
     };
 
@@ -168,7 +170,16 @@
         height: 100%;
         transition: width .2s ease;
         background-size: 40px 40px;
-        background-image: linear-gradient( 45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent );
+        background-image: linear-gradient(
+            45deg,
+            rgba(255, 255, 255, .15) 25%,
+            transparent 25%,
+            transparent 50%,
+            rgba(255, 255, 255, .15) 50%,
+            rgba(255, 255, 255, .15) 75%,
+            transparent 75%,
+            transparent
+        );
     }
 
     .level-progress-current {
@@ -213,10 +224,10 @@
         padding: 0;
     }
 
-        .level-bucket-row + .level-bucket-row {
-            padding-top: .5rem;
-            border-top: 1px solid rgba(98, 105, 118, .10);
-        }
+    .level-bucket-row + .level-bucket-row {
+        padding-top: .5rem;
+        border-top: 1px solid rgba(98, 105, 118, .10);
+    }
 
     .count-status-wrap {
         display: flex;
@@ -234,47 +245,47 @@
         transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
     }
 
-        .item-card::before,
-        .progress-timer-card::before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto 0;
-            height: 4px;
-            background: #E6E6FA;
-            pointer-events: none;
-        }
+    .item-card::before,
+    .progress-timer-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 4px;
+        background: rgba(32, 107, 196, .78);
+        pointer-events: none;
+    }
 
-        .item-card .card-body,
-        .progress-timer-card .card-body {
-            position: relative;
-            z-index: 1;
-            padding: .75rem;
-        }
+    .item-card .card-body,
+    .progress-timer-card .card-body {
+        position: relative;
+        z-index: 1;
+        padding: .75rem;
+    }
 
-        .item-card:hover,
-        .progress-timer-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .07);
-        }
+    .item-card:hover,
+    .progress-timer-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 .35rem 1rem rgba(15, 23, 42, .07);
+    }
 
-        .item-card .fw-bold.fs-3,
-        .progress-timer-card .fw-bold.fs-3,
-        .progress-timer-card .fw-bold.fs-4 {
-            font-size: 1rem !important;
-            line-height: 1.25;
-        }
+    .item-card .fw-bold.fs-3,
+    .progress-timer-card .fw-bold.fs-3,
+    .progress-timer-card .fw-bold.fs-4 {
+        font-size: 1rem !important;
+        line-height: 1.25;
+    }
 
-        .item-card .badge,
-        .progress-timer-card .badge,
-        .compact-card .badge {
-            font-size: .7rem;
-        }
+    .item-card .badge,
+    .progress-timer-card .badge,
+    .compact-card .badge {
+        font-size: .7rem;
+    }
 
-        .item-card .text-secondary.small,
-        .progress-timer-card .text-secondary.small,
-        .compact-card .text-secondary.small {
-            font-size: .72rem;
-        }
+    .item-card .text-secondary.small,
+    .progress-timer-card .text-secondary.small,
+    .compact-card .text-secondary.small {
+        font-size: .72rem;
+    }
 
     .section-heading {
         margin-bottom: 0;
@@ -291,10 +302,10 @@
         color: var(--tblr-body-color);
     }
 
-        .compact-card > .card-header .card-title,
-        .compact-card > .card-header .text-secondary {
-            color: var(--tblr-body-color) !important;
-        }
+    .compact-card > .card-header .card-title,
+    .compact-card > .card-header .text-secondary {
+        color: var(--tblr-body-color) !important;
+    }
 
     .section-card > .card-header {
         padding: .7rem .9rem;
@@ -303,10 +314,10 @@
         color: var(--tblr-body-color);
     }
 
-        .section-card > .card-header .card-title,
-        .section-card > .card-header .text-secondary {
-            color: inherit !important;
-        }
+    .section-card > .card-header .card-title,
+    .section-card > .card-header .text-secondary {
+        color: inherit !important;
+    }
 
     .compact-card > .card-body,
     .section-card > .card-body {
@@ -353,9 +364,9 @@
         background: linear-gradient(135deg, rgba(32, 107, 196, .96) 0%, rgba(112, 72, 232, .94) 100%);
     }
 
-        .village-hero .badge.bg-white {
-            background: rgba(255, 255, 255, .92) !important;
-        }
+    .village-hero .badge.bg-white {
+        background: rgba(255, 255, 255, .92) !important;
+    }
 
     .village-hero-actions {
         display: flex;
@@ -365,17 +376,17 @@
         justify-content: flex-end;
     }
 
-        .village-hero-actions .btn {
-            --tblr-btn-padding-y: .35rem;
-            --tblr-btn-padding-x: .65rem;
-            --tblr-btn-font-size: .78rem;
-        }
+    .village-hero-actions .btn {
+        --tblr-btn-padding-y: .35rem;
+        --tblr-btn-padding-x: .65rem;
+        --tblr-btn-font-size: .78rem;
+    }
 
-        .village-hero-actions .btn-icon {
-            width: 2rem;
-            height: 2rem;
-            padding: 0;
-        }
+    .village-hero-actions .btn-icon {
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+    }
 
     .village-hero-avatar {
         width: 3.25rem;
@@ -400,10 +411,10 @@
         margin-top: .85rem;
     }
 
-        .village-hero-capabilities .badge {
-            font-size: .72rem;
-            box-shadow: 0 .125rem .25rem rgba(15, 23, 42, .12);
-        }
+    .village-hero-capabilities .badge {
+        font-size: .72rem;
+        box-shadow: 0 .125rem .25rem rgba(15, 23, 42, .12);
+    }
 
     @@media (max-width: 991.98px) {
         .village-hero-actions {
@@ -612,9 +623,24 @@
 {
     <div class="card section-card mb-4" data-search-card="table">
         <div class="card-header">
-            <h3 class="card-title">Pending Suggestions</h3>
-            <div class="card-actions">
+            <div>
+                <h3 class="card-title">Pending Suggestions</h3>
+                <div class="text-secondary small mt-1">Bulk actions apply only to currently pending suggestions for this village.</div>
+            </div>
+            <div class="card-actions d-flex flex-wrap align-items-center gap-2">
                 <span class="badge bg-orange-lt text-orange">@pendingCount pending</span>
+                <form asp-controller="PrioritySuggestion" asp-action="BulkRespond" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="villageId" value="@Model.Id" />
+                    <input type="hidden" name="accept" value="true" />
+                    <button class="btn btn-sm btn-success" onclick="return confirm('Accept all pending suggestions for this village?');">Accept all</button>
+                </form>
+                <form asp-controller="PrioritySuggestion" asp-action="BulkRespond" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="villageId" value="@Model.Id" />
+                    <input type="hidden" name="accept" value="false" />
+                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Reject all pending suggestions for this village?');">Reject all</button>
+                </form>
             </div>
         </div>
 
@@ -710,21 +736,25 @@
             <div class="row row-cards">
                 @foreach (var helperCard in helpers)
                 {
-                    var helperCountdownAtUtc = helperCard.UpgradeFinishAtUtc ?? helperCard.AvailableAtUtc;
+                    var helperCountdownAtUtc = helperCard.EstimatedTargetFinishAtUtc ?? helperCard.UpgradeFinishAtUtc ?? helperCard.AvailableAtUtc;
+                    var helperResetRemaining = helperCard.NextResetAtUtc.HasValue
+                        ? helperCard.NextResetAtUtc.Value - nowUtc
+                        : TimeSpan.Zero;
                     var helperRemaining = helperCountdownAtUtc.HasValue
-                    ? helperCountdownAtUtc.Value - nowUtc
-                    : TimeSpan.Zero;
+                        ? helperCountdownAtUtc.Value - nowUtc
+                        : TimeSpan.Zero;
 
                     var helperCountdownLabel = helperCard.StatusLabel switch
                     {
                         "Leveling" => "Finishes in",
-                        "Assigned" => "Next cycle in",
+                        "Helping recurrent" => helperCard.EstimatedTargetFinishAtUtc.HasValue ? "Estimated target finishes in" : "Target finishes in",
+                        "Assigned" => "Busy until",
                         "Cooldown" => "Available in",
-                        _ => "Available"
+                        _ => "Availability"
                     };
 
                     <div class="col-md-6 col-xl-3 detail-card-col"
-                         data-search-text="@($"{helperCard.ItemName} {helperCard.HelperKind} {helperCard.StatusLabel} {helperCard.AssignmentLabel} {sectionLabel(helperCard.Section)}".ToLowerInvariant())">
+                             data-search-text="@($"{helperCard.ItemName} {helperCard.HelperKind} {helperCard.StatusLabel} {helperCard.AssignmentLabel} {sectionLabel(helperCard.Section)}".ToLowerInvariant())">
                         <div class="card progress-timer-card compact-card">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
@@ -747,6 +777,10 @@
                                     {
                                         <span class="badge bg-secondary-lt text-secondary">Target inferred</span>
                                     }
+                                    @if (helperCard.SavedSecondsPerCycle.HasValue && helperCard.StatusLabel == "Helping recurrent")
+                                    {
+                                        <span class="badge bg-green-lt text-green">Saves @formatRemaining(TimeSpan.FromSeconds(helperCard.SavedSecondsPerCycle.Value)) / cycle</span>
+                                    }
                                 </div>
 
                                 <div class="mb-3">
@@ -755,7 +789,7 @@
                                         <div class="text-secondary small mb-1">Helping</div>
                                         <div class="fw-semibold">@helperCard.AssignmentLabel</div>
                                     }
-                                    else if (helperCard.StatusLabel == "Idle")
+                                    else if (helperCard.StatusLabel == "Idle" || helperCard.StatusLabel == "Available")
                                     {
                                         <div class="text-secondary small mb-1">State</div>
                                         <div class="fw-semibold text-green">Ready</div>
@@ -773,7 +807,14 @@
 
                                     @if (helperCountdownAtUtc.Value <= nowUtc)
                                     {
-                                        <div class="fw-semibold text-green">Available now</div>
+                                        @if (helperCard.StatusLabel == "Helping recurrent" || helperCard.StatusLabel == "Assigned")
+                                        {
+                                            <div class="fw-semibold">Still assigned</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="fw-semibold text-green">Available now</div>
+                                        }
                                     }
                                     else
                                     {
@@ -787,6 +828,22 @@
                                 {
                                     <div class="text-secondary small mb-1">Availability</div>
                                     <div class="fw-semibold text-green">Available now</div>
+                                }
+
+                                @if (helperCard.NextResetAtUtc.HasValue && helperCard.NextResetAtUtc.Value > nowUtc && helperCard.StatusLabel == "Helping recurrent")
+                                {
+                                    <div class="text-secondary small mt-3 mb-1">Next reset in</div>
+                                    <div class="fw-semibold countdown-value live-countdown"
+                                         data-finish-utc="@helperCard.NextResetAtUtc.Value.ToString("O")">
+                                        @formatRemaining(helperResetRemaining)
+                                    </div>
+                                }
+
+                                @if (helperCard.EstimatedFutureSavedSeconds.HasValue && helperCard.EstimatedFutureSavedSeconds.Value > 0 && helperCard.StatusLabel == "Helping recurrent")
+                                {
+                                    <div class="text-secondary small mt-2">
+                                        Estimated future time saved: @formatRemaining(TimeSpan.FromSeconds(helperCard.EstimatedFutureSavedSeconds.Value))
+                                    </div>
                                 }
 
                                 @if (!string.IsNullOrWhiteSpace(helperCard.RecurringText))
@@ -825,7 +882,7 @@
                     {
                         var remaining = timer.FinishAtUtc - nowUtc;
 
-                        <div class="col-md-6 col-xl-4 detail-card-col"
+                        <div class="col-sm-6 col-lg-4 col-xl-3 detail-card-col"
                              data-search-text="@($"{timer.ItemName} {sectionLabel(timer.Section)} {itemTypeLabel(timer.ItemType)} {timer.ProgressGroup} {timer.StatusLabel}".ToLowerInvariant())">
                             <div class="card progress-timer-card compact-card">
                                 <div class="card-body">
@@ -937,7 +994,7 @@
                     (!item.MaxLevelAtCurrentHall.HasValue || levelsFullyAtHallCap) &&
                     (!item.MaxCountAtCurrentHall.HasValue || item.CurrentTotalCount >= item.MaxCountAtCurrentHall.Value);
 
-                    <div class="col-md-6 col-xl-4 detail-card-col"
+                    <div class="col-sm-6 col-lg-4 col-xl-3 detail-card-col"
                          data-search-text="@($"{item.ItemName} {sectionLabel(item.Section)} {itemTypeLabel(item.ItemType)} priority ranked".ToLowerInvariant())">
                         <div class="card item-card compact-card border-primary">
                             <div class="card-body">
@@ -1143,10 +1200,10 @@
                                                     </div>
 
                                                     <textarea name="Message"
-                                              class="form-control form-control-sm"
-                                              rows="2"
-                                              required
-                                              placeholder="Why should this item be moved up?"></textarea>
+                                                              class="form-control form-control-sm"
+                                                              rows="2"
+                                                              required
+                                                              placeholder="Why should this item be moved up?"></textarea>
 
                                                     <button class="btn btn-sm btn-outline-primary">
                                                         Suggest Item
@@ -1256,8 +1313,8 @@ else
                                 (!item.MaxLevelAtCurrentHall.HasValue || levelsFullyAtHallCap) &&
                                 (!item.MaxCountAtCurrentHall.HasValue || item.CurrentTotalCount >= item.MaxCountAtCurrentHall.Value);
 
-                                <div class="col-md-6 col-xl-4 detail-card-col"
-                                     data-search-text="@($"{item.ItemName} {sectionLabel(item.Section)} {itemTypeLabel(item.ItemType)}".ToLowerInvariant())">
+                                <div class="col-sm-6 col-lg-4 col-xl-3 detail-card-col"
+                                         data-search-text="@($"{item.ItemName} {sectionLabel(item.Section)} {itemTypeLabel(item.ItemType)}".ToLowerInvariant())">
                                     <div class="card item-card compact-card">
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between align-items-start mb-3">
@@ -1441,10 +1498,10 @@ else
                                                                 </div>
 
                                                                 <textarea name="Message"
-                                                  class="form-control form-control-sm"
-                                                  rows="2"
-                                                  required
-                                                  placeholder="Why should this item be moved up?"></textarea>
+                                                                          class="form-control form-control-sm"
+                                                                          rows="2"
+                                                                          required
+                                                                          placeholder="Why should this item be moved up?"></textarea>
 
                                                                 <button class="btn btn-sm btn-outline-primary">
                                                                     Suggest Item

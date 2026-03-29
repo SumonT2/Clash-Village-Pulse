@@ -59,4 +59,30 @@ public class PrioritySuggestionController : Controller
 
         return RedirectToAction("Details", "Village", new { id = villageId });
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> BulkRespond(
+        Guid villageId,
+        bool accept,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        try
+        {
+            var affected = await _priorityService.RespondToAllSuggestionsAsync(userId, villageId, accept, cancellationToken);
+            TempData["SuccessMessage"] = affected == 0
+                ? "There were no pending suggestions to process."
+                : accept
+                    ? $"Accepted {affected} pending suggestion(s)."
+                    : $"Rejected {affected} pending suggestion(s).";
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction("Details", "Village", new { id = villageId });
+    }
 }

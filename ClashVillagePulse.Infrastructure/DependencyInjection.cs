@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IVillageQueryService, VillageQueryService>();
         services.AddScoped<IStaticDataGenerationService, StaticDataGenerationService>();
         services.AddHttpClient<StaticDataDownloader>();
+        services.AddHttpClient<FankitImageCrawler>();
         services.AddScoped<CsvParser>();
 
         services.AddScoped<IStaticDataTargetProcessor, BuildingsProcessor>();
@@ -33,6 +34,8 @@ public static class DependencyInjection
         services.AddScoped<IStaticDataTargetProcessor, EquipmentProcessor>();
         services.AddScoped<IStaticDataTargetProcessor, TrapsProcessor>();
         services.AddScoped<IStaticDataTargetProcessor, GuardiansProcessor>();
+        services.AddScoped<IStaticDataTargetProcessor, HelpersProcessor>();
+        services.AddScoped<IStaticDataTargetProcessor, FankitImagesProcessor>();
         services.AddScoped<TrapsCsvMapper>();
         services.AddScoped<BuildingsCsvMapper>();
         services.AddScoped<StaticDataDecompressor>();
@@ -44,11 +47,10 @@ public static class DependencyInjection
         services.AddScoped<HeroesCsvMapper>();
         services.AddScoped<PetsCsvMapper>();
         services.AddScoped<EquipmentCsvMapper>();
+        services.AddScoped<VillagerApprenticesCsvMapper>();
         services.AddHttpClient<IClashApiService, ClashApiService>();
         services.AddScoped<IClashProfileSyncService, ClashProfileSyncService>();
         services.AddScoped<IPriorityService, PriorityService>();
-        services.AddScoped<VillagerApprenticesCsvMapper>();
-        services.AddScoped<IStaticDataTargetProcessor, HelpersProcessor>();
 
         return services;
     }

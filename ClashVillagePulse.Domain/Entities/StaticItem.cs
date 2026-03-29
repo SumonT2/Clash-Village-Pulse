@@ -17,4 +17,6 @@ public class StaticItem
     public bool IsUpgradeable { get; set; }
 
     public ICollection<StaticItemLevel> Levels { get; set; } = new List<StaticItemLevel>();
+
+    public ICollection<StaticItemImage> Images { get; set; } = new List<StaticItemImage>();
 }

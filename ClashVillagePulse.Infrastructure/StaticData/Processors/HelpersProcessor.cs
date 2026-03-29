@@ -100,7 +100,10 @@ public class HelpersProcessor : StaticDataTargetProcessorBase
                     Id = Guid.NewGuid(),
                     StaticItemId = staticItem.Id,
                     Level = row.Level,
-                    UpgradeTimeSeconds = null
+                    UpgradeTimeSeconds = null,
+                    HelperType = row.HelperType,
+                    BoostMultiplier = row.BoostMultiplier,
+                    BoostTimeSeconds = row.BoostTimeSeconds
                 };
 
                 if (row.Cost.HasValue && !string.IsNullOrWhiteSpace(row.CostResource))

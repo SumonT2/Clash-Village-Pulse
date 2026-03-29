@@ -1,4 +1,4 @@
-﻿using ClashVillagePulse.Application.DTOs;
+using ClashVillagePulse.Application.DTOs;
 using ClashVillagePulse.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,5 +51,36 @@ public class VillagePriorityController : Controller
         }
 
         return RedirectToAction(nameof(Edit), new { villageId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SuggestToVillage(
+        Guid sourceVillageId,
+        Guid targetVillageId,
+        string? message,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        try
+        {
+            var result = await _priorityService.SuggestVillagePriorityToVillageAsync(
+                userId,
+                sourceVillageId,
+                targetVillageId,
+                message,
+                cancellationToken);
+
+            TempData["SuccessMessage"] = result.AddedCount > 0
+                ? $"Added {result.AddedCount} pending suggestion(s) to {result.TargetVillageName}. Skipped {result.MissingInTargetCount} missing item(s), {result.AlreadyPrioritizedCount} already prioritized, and {result.AlreadyPendingCount} already pending."
+                : $"No new pending suggestions were added to {result.TargetVillageName}. Skipped {result.MissingInTargetCount} missing item(s), {result.AlreadyPrioritizedCount} already prioritized, and {result.AlreadyPendingCount} already pending.";
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Edit), new { villageId = sourceVillageId });
     }
 }

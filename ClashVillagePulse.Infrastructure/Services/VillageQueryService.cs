@@ -173,11 +173,39 @@ public sealed class VillageQueryService : IVillageQueryService
         if (village is null)
             return null;
 
+        IReadOnlyList<VillageListItemDto> suggestionTargets = Array.Empty<VillageListItemDto>();
+
+        suggestionTargets = await (
+            from target in _db.Villages.AsNoTracking()
+            join u in _db.Users.AsNoTracking() on target.OwnerUserId equals u.Id into ownerJoin
+            from owner in ownerJoin.DefaultIfEmpty()
+            where !target.IsArchived
+                && target.Id != village.Id
+                && (
+                    target.OwnerUserId == ownerUserId ||
+                    (village.ClanId.HasValue && target.ClanId == village.ClanId.Value)
+                )
+            orderby target.OwnerUserId == ownerUserId ? 0 : 1, target.Name
+            select new VillageListItemDto
+            {
+                Id = target.Id,
+                Name = target.Name,
+                PlayerTag = target.PlayerTag,
+                ClanName = target.ClanName,
+                ClanTag = target.ClanTag,
+                OwnerDisplayName = owner != null
+                    ? (owner.UserName ?? owner.Email ?? owner.Id)
+                    : target.OwnerUserId,
+                LastUploadedAtUtc = target.LastUploadedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
         return new VillagePriorityEditDto
         {
             VillageId = village.Id,
             VillageName = village.Name,
-            Items = await BuildItemStatesAsync(village, cancellationToken)
+            Items = await BuildItemStatesAsync(village, cancellationToken),
+            SuggestionTargets = suggestionTargets
         };
     }
 
@@ -228,7 +256,10 @@ public sealed class VillageQueryService : IVillageQueryService
         if (!village.LastGameTimestamp.HasValue)
             return new List<VillageHelperStatusDto>();
 
+        const int recurringCycleSeconds = 24 * 60 * 60;
+
         var exportedAtUtc = DateTimeOffset.FromUnixTimeSeconds(village.LastGameTimestamp.Value).UtcDateTime;
+        var nowUtc = DateTime.UtcNow;
 
         var helperRows = await _db.VillageItemLevels
             .AsNoTracking()
@@ -256,6 +287,7 @@ public sealed class VillageQueryService : IVillageQueryService
 
         var staticItems = await _db.StaticItems
             .AsNoTracking()
+            .Include(x => x.Levels)
             .Where(x => itemDataIds.Contains(x.ItemDataId))
             .ToListAsync(cancellationToken);
 
@@ -265,13 +297,13 @@ public sealed class VillageQueryService : IVillageQueryService
 
         var builderCandidates = targetRows
             .Where(IsBuilderHelperTarget)
-            .OrderBy(x => x.UpgradeTimerSeconds)
+            .OrderByDescending(x => x.UpgradeTimerSeconds)
             .ThenBy(x => x.ItemDataId)
             .ToList();
 
         var labCandidates = targetRows
             .Where(IsLabHelperTarget)
-            .OrderBy(x => x.UpgradeTimerSeconds)
+            .OrderByDescending(x => x.UpgradeTimerSeconds)
             .ThenBy(x => x.ItemDataId)
             .ToList();
 
@@ -283,10 +315,18 @@ public sealed class VillageQueryService : IVillageQueryService
 
             var helperKind = ResolveHelperKind(row.ItemDataId);
             var helperName = helperStaticItem?.Name ?? ResolveHelperDisplayName(row.ItemDataId);
+            var helperStaticLevel = helperStaticItem?.Levels.FirstOrDefault(x => x.Level == row.Level);
+
             var upgradeSeconds = row.UpgradeTimerSeconds is > 0 ? row.UpgradeTimerSeconds : null;
             var cooldownSeconds = row.HelperCooldownSeconds is > 0 ? row.HelperCooldownSeconds : null;
             var upgradeFinishAtUtc = upgradeSeconds.HasValue ? exportedAtUtc.AddSeconds(upgradeSeconds.Value) : (DateTime?)null;
-            var availableAtUtc = cooldownSeconds.HasValue ? exportedAtUtc.AddSeconds(cooldownSeconds.Value) : (DateTime?)null;
+            var cooldownFinishAtUtc = cooldownSeconds.HasValue ? exportedAtUtc.AddSeconds(cooldownSeconds.Value) : (DateTime?)null;
+
+            var boostTimeSeconds = helperStaticLevel?.BoostTimeSeconds is > 0 ? helperStaticLevel.BoostTimeSeconds : null;
+            var boostMultiplier = helperStaticLevel?.BoostMultiplier is > 0 ? helperStaticLevel.BoostMultiplier : null;
+            var savedSecondsPerCycle = boostTimeSeconds.HasValue && boostMultiplier.HasValue
+                ? boostTimeSeconds.Value * boostMultiplier.Value
+                : (int?)null;
 
             var candidates = helperKind switch
             {
@@ -295,9 +335,37 @@ public sealed class VillageQueryService : IVillageQueryService
                 _ => new List<VillageItemLevel>()
             };
 
-            var hasMultiplePossibleTargets = candidates.Count > 1;
-            var isAssigned = candidates.Count > 0;
-            var resolvedTarget = candidates.Count == 1 ? candidates[0] : null;
+            var candidateInfos = candidates
+                .Select(candidate => new
+                {
+                    Row = candidate,
+                    FinishAtUtc = candidate.UpgradeTimerSeconds is > 0
+                        ? exportedAtUtc.AddSeconds(candidate.UpgradeTimerSeconds.Value)
+                        : (DateTime?)null
+                })
+                .ToList();
+
+            var activeTargetInfos = candidateInfos
+                .Where(x => x.FinishAtUtc.HasValue && x.FinishAtUtc.Value > nowUtc)
+                .ToList();
+
+            var hasActiveTarget = activeTargetInfos.Count > 0;
+            var hasMultiplePossibleTargets = candidateInfos.Count > 1;
+
+            var representativeTarget = !hasMultiplePossibleTargets && candidateInfos.Count == 1
+                ? candidateInfos[0]
+                : activeTargetInfos
+                    .OrderByDescending(x => x.FinishAtUtc)
+                    .ThenBy(x => x.Row.ItemDataId)
+                    .FirstOrDefault()
+                  ?? candidateInfos
+                    .OrderByDescending(x => x.FinishAtUtc)
+                    .ThenBy(x => x.Row.ItemDataId)
+                    .FirstOrDefault();
+
+            var resolvedTarget = !hasMultiplePossibleTargets && candidateInfos.Count == 1
+                ? candidateInfos[0].Row
+                : null;
 
             string? targetItemName = null;
             if (resolvedTarget is not null &&
@@ -308,26 +376,85 @@ public sealed class VillageQueryService : IVillageQueryService
 
             string? assignmentLabel = resolvedTarget is not null
                 ? targetItemName ?? BuildFallbackTargetLabel(resolvedTarget)
-                : isAssigned
+                : hasActiveTarget
                     ? BuildGenericAssignmentLabel(helperKind)
                     : null;
 
-            var statusLabel = upgradeSeconds.HasValue
-                ? "Leveling"
-                : isAssigned
-                    ? "Assigned"
-                    : cooldownSeconds.HasValue
-                        ? "Cooldown"
-                        : "Idle";
+            var targetFinishAtUtc = representativeTarget?.FinishAtUtc;
+            DateTime? estimatedTargetFinishAtUtc = null;
+            int? estimatedFutureSavedSeconds = null;
 
-            var statusTone = statusLabel switch
+            if (hasActiveTarget &&
+                cooldownFinishAtUtc.HasValue &&
+                savedSecondsPerCycle.HasValue &&
+                boostTimeSeconds.HasValue &&
+                boostTimeSeconds.Value > 0 &&
+                boostMultiplier.HasValue &&
+                boostMultiplier.Value > 0 &&
+                targetFinishAtUtc.HasValue)
             {
-                "Leveling" => "orange",
-                "Assigned" => "azure",
-                "Cooldown" => "yellow",
-                "Idle" => "green",
-                _ => "secondary"
-            };
+                estimatedTargetFinishAtUtc = EstimateRecurringFinishAtUtc(
+                    exportedAtUtc,
+                    representativeTarget!.Row.UpgradeTimerSeconds!.Value,
+                    cooldownFinishAtUtc.Value,
+                    boostTimeSeconds.Value,
+                    savedSecondsPerCycle.Value,
+                    recurringCycleSeconds);
+
+                if (estimatedTargetFinishAtUtc.HasValue && estimatedTargetFinishAtUtc.Value < targetFinishAtUtc.Value)
+                {
+                    estimatedFutureSavedSeconds = (int)Math.Max(0, Math.Round((targetFinishAtUtc.Value - estimatedTargetFinishAtUtc.Value).TotalSeconds));
+                }
+            }
+
+            var helperBusyUntilUtc = estimatedTargetFinishAtUtc
+                ?? targetFinishAtUtc;
+
+            var trueAvailableAtUtc = hasActiveTarget
+                ? helperBusyUntilUtc
+                : cooldownFinishAtUtc;
+
+            var isRecurring = hasActiveTarget || candidateInfos.Count > 0;
+
+            string statusLabel;
+            string statusTone;
+            string? recurringText = null;
+
+            if (upgradeSeconds.HasValue)
+            {
+                statusLabel = "Leveling";
+                statusTone = "orange";
+            }
+            else if (hasActiveTarget)
+            {
+                statusLabel = "Helping recurrent";
+                statusTone = "azure";
+
+                if (savedSecondsPerCycle.HasValue && cooldownFinishAtUtc.HasValue)
+                {
+                    recurringText = estimatedFutureSavedSeconds is > 0
+                        ? $"Next reset at {cooldownFinishAtUtc.Value:yyyy-MM-dd HH:mm} UTC. Saves {FormatCompactDuration(savedSecondsPerCycle.Value)} per cycle. Estimated to save {FormatCompactDuration(estimatedFutureSavedSeconds.Value)} more before the target finishes."
+                        : $"Next reset at {cooldownFinishAtUtc.Value:yyyy-MM-dd HH:mm} UTC. Saves {FormatCompactDuration(savedSecondsPerCycle.Value)} per cycle until the target upgrade finishes.";
+                }
+                else if (cooldownFinishAtUtc.HasValue)
+                {
+                    recurringText = $"Next reset at {cooldownFinishAtUtc.Value:yyyy-MM-dd HH:mm} UTC. Recurring support remains active until the target upgrade finishes.";
+                }
+                else
+                {
+                    recurringText = "Recurring support active until the target upgrade finishes.";
+                }
+            }
+            else if (cooldownFinishAtUtc.HasValue && cooldownFinishAtUtc.Value > nowUtc)
+            {
+                statusLabel = "Cooldown";
+                statusTone = "yellow";
+            }
+            else
+            {
+                statusLabel = "Available";
+                statusTone = "green";
+            }
 
             result.Add(new VillageHelperStatusDto
             {
@@ -339,18 +466,24 @@ public sealed class VillageQueryService : IVillageQueryService
                 HelperKind = helperKind,
                 StatusLabel = statusLabel,
                 StatusTone = statusTone,
-                IsRecurring = isAssigned,
-                RecurringText = isAssigned ? "Recurring support active" : null,
+                IsRecurring = isRecurring,
+                RecurringText = recurringText,
                 UpgradeSecondsAtExport = upgradeSeconds,
                 UpgradeFinishAtUtc = upgradeFinishAtUtc,
                 CooldownSecondsAtExport = cooldownSeconds,
-                AvailableAtUtc = availableAtUtc,
+                NextResetAtUtc = cooldownFinishAtUtc,
+                AvailableAtUtc = trueAvailableAtUtc,
+                BoostMultiplier = boostMultiplier,
+                BoostTimeSeconds = boostTimeSeconds,
+                SavedSecondsPerCycle = savedSecondsPerCycle,
+                EstimatedFutureSavedSeconds = estimatedFutureSavedSeconds,
+                EstimatedTargetFinishAtUtc = estimatedTargetFinishAtUtc,
                 AssignmentLabel = assignmentLabel,
-                TargetItemType = resolvedTarget?.ItemType,
-                TargetItemDataId = resolvedTarget?.ItemDataId,
+                TargetItemType = representativeTarget?.Row.ItemType,
+                TargetItemDataId = representativeTarget?.Row.ItemDataId,
                 TargetItemName = targetItemName,
-                TargetRemainingSecondsAtExport = resolvedTarget?.UpgradeTimerSeconds,
-                TargetIsInferred = resolvedTarget is not null,
+                TargetRemainingSecondsAtExport = representativeTarget?.Row.UpgradeTimerSeconds,
+                TargetIsInferred = representativeTarget is not null,
                 HasMultiplePossibleTargets = hasMultiplePossibleTargets
             });
         }
@@ -387,6 +520,7 @@ public sealed class VillageQueryService : IVillageQueryService
 
         var staticItems = await _db.StaticItems
             .AsNoTracking()
+            .Include(x => x.Levels)
             .Where(x => itemDataIds.Contains(x.ItemDataId))
             .ToListAsync(cancellationToken);
 
@@ -631,6 +765,75 @@ public sealed class VillageQueryService : IVillageQueryService
         (row.ItemType == ItemType.Troop ||
          row.ItemType == ItemType.Spell ||
          row.ItemType == ItemType.SiegeMachine);
+
+    private static DateTime? EstimateRecurringFinishAtUtc(
+        DateTime exportedAtUtc,
+        int exportedRemainingSeconds,
+        DateTime nextResetAtUtc,
+        int workSeconds,
+        int savedSecondsPerCycle,
+        int cycleSeconds)
+    {
+        if (exportedRemainingSeconds <= 0)
+            return exportedAtUtc;
+
+        if (workSeconds <= 0 || savedSecondsPerCycle <= 0 || cycleSeconds <= 0)
+            return exportedAtUtc.AddSeconds(exportedRemainingSeconds);
+
+        var current = exportedAtUtc;
+        double remaining = exportedRemainingSeconds;
+
+        if (nextResetAtUtc > current)
+        {
+            var untilReset = (nextResetAtUtc - current).TotalSeconds;
+            if (remaining <= untilReset)
+                return current.AddSeconds(remaining);
+
+            remaining -= untilReset;
+            current = nextResetAtUtc;
+        }
+
+        var cooldownSeconds = Math.Max(0, cycleSeconds - workSeconds);
+        var effectiveRateDuringWork = 1d + ((double)savedSecondsPerCycle / workSeconds);
+        var fullWorkProgress = workSeconds + savedSecondsPerCycle;
+
+        for (var cycle = 0; cycle < 365 && remaining > 0; cycle++)
+        {
+            if (remaining <= fullWorkProgress)
+            {
+                var secondsIntoWork = remaining / effectiveRateDuringWork;
+                return current.AddSeconds(secondsIntoWork);
+            }
+
+            remaining -= fullWorkProgress;
+            current = current.AddSeconds(workSeconds);
+
+            if (remaining <= cooldownSeconds)
+                return current.AddSeconds(remaining);
+
+            remaining -= cooldownSeconds;
+            current = current.AddSeconds(cooldownSeconds);
+        }
+
+        return current;
+    }
+
+    private static string FormatCompactDuration(int totalSeconds)
+    {
+        totalSeconds = Math.Max(0, totalSeconds);
+        var ts = TimeSpan.FromSeconds(totalSeconds);
+
+        if (ts.TotalDays >= 1)
+            return $"{(int)ts.TotalDays}d {ts.Hours}h";
+
+        if (ts.TotalHours >= 1)
+            return $"{(int)ts.TotalHours}h {ts.Minutes}m";
+
+        if (ts.TotalMinutes >= 1)
+            return $"{(int)ts.TotalMinutes}m {ts.Seconds}s";
+
+        return $"{ts.Seconds}s";
+    }
 
     private static string ResolveHelperKind(int itemDataId) => itemDataId switch
     {
